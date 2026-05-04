@@ -55,7 +55,7 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
-    const token = this.generateToken(user.id, user.role, user.hotel_id);
+    const tokens = this.generateTokens(user.id, user.role, user.hotel_id);
 
     return {
       user: {
@@ -65,15 +65,55 @@ export class AuthService {
         role: user.role,
         hotelId: user.hotel_id
       },
-      token
+      ...tokens
     };
   }
 
-  private generateToken(userId: number, role: string, hotelId: number | null): string {
-    return jwt.sign(
-      { userId, role, hotelId },
+  async refreshTokens(refreshToken: string) {
+    if (!refreshToken) {
+      throw new AppError('Refresh token is required', 400);
+    }
+
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'supersecretrefreshjwtkey') as any;
+      
+      const user = await this.userRepository.findById(decoded.userId);
+      if (!user) {
+        throw new AppError('User no longer exists', 401);
+      }
+
+      const tokens = this.generateTokens(user.id, user.role, user.hotel_id);
+      
+      return {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          hotelId: user.hotel_id
+        },
+        ...tokens
+      };
+    } catch (error) {
+      throw new AppError('Invalid refresh token', 401);
+    }
+  }
+
+  private generateTokens(userId: number, role: string, hotelId: number | null) {
+    const payload = { userId, role, hotelId };
+    
+    const accessToken = jwt.sign(
+      payload,
       process.env.JWT_SECRET as string,
-      { expiresIn: '1d' }
+      { expiresIn: '15m' }
     );
+
+    const refreshToken = jwt.sign(
+      payload,
+      process.env.JWT_REFRESH_SECRET || 'supersecretrefreshjwtkey',
+      { expiresIn: '7d' }
+    );
+
+    return { accessToken, refreshToken };
   }
 }

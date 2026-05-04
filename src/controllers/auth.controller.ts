@@ -36,3 +36,14 @@ export const setupAdmin = catchAsync(async (req: Request, res: Response) => {
     data: user
   });
 });
+
+export const refresh = catchAsync(async (req: Request, res: Response) => {
+  const { refreshToken } = req.body;
+  
+  const data = await authService.refreshTokens(refreshToken);
+
+  res.status(200).json({
+    success: true,
+    data
+  });
+});

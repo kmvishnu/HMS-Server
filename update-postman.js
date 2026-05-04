@@ -8,56 +8,27 @@ const collection = JSON.parse(data);
 // Find the "Auth & Users" folder
 const usersFolder = collection.item.find(i => i.name === 'Auth & Users');
 if (usersFolder) {
-  if (!usersFolder.item.find(i => i.name === 'Get Users')) {
+  if (!usersFolder.item.find(i => i.name === 'Refresh Token')) {
     usersFolder.item.push({
-      name: "Get Users",
+      name: "Refresh Token",
       request: {
-        method: "GET",
+        method: "POST",
         header: [
-          { key: "Authorization", value: "Bearer {{token}}" }
+          { key: "Content-Type", value: "application/json" }
         ],
+        body: {
+          mode: "raw",
+          raw: "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+        },
         url: {
-          raw: "{{baseUrl}}/users?role=HOTEL_OWNER",
+          raw: "{{baseUrl}}/auth/refresh",
           host: ["{{baseUrl}}"],
-          path: ["users"],
-          query: [
-            { key: "role", value: "HOTEL_OWNER" }
-          ]
+          path: ["auth", "refresh"]
         }
       }
     });
   }
 }
 
-// Add Admin folder if doesn't exist
-let adminFolder = collection.item.find(i => i.name === 'Admin Dashboard');
-if (!adminFolder) {
-  adminFolder = {
-    name: "Admin Dashboard",
-    item: []
-  };
-  collection.item.push(adminFolder);
-}
-
-if (!adminFolder.item.find(i => i.name === 'Global Search')) {
-  adminFolder.item.push({
-    name: "Global Search",
-    request: {
-      method: "GET",
-      header: [
-        { key: "Authorization", value: "Bearer {{token}}" }
-      ],
-      url: {
-        raw: "{{baseUrl}}/admin/search?q=plaza",
-        host: ["{{baseUrl}}"],
-        path: ["admin", "search"],
-        query: [
-          { key: "q", value: "plaza" }
-        ]
-      }
-    }
-  });
-}
-
 fs.writeFileSync(filePath, JSON.stringify(collection, null, 2));
-console.log('Postman collection updated successfully with Admin & Users list.');
+console.log('Postman collection updated successfully with Refresh Token.');
