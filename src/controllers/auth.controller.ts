@@ -25,3 +25,14 @@ export const login = catchAsync(async (req: Request, res: Response) => {
     data
   });
 });
+
+export const setupAdmin = catchAsync(async (req: Request, res: Response) => {
+  const { name, email, password } = req.body;
+  const user = await authService.setupFirstAdmin(name, email, password);
+
+  res.status(201).json({
+    success: true,
+    message: 'Super Admin created successfully',
+    data: user
+  });
+});

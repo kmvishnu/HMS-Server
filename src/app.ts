@@ -4,12 +4,17 @@ import helmet from 'helmet';
 import { errorHandler } from './middleware/error.middleware';
 import { AppError } from './utils/AppError';
 
+import path from 'path';
+
 const app: Express = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({ crossOriginResourcePolicy: false })); // allow images to be served
 app.use(cors());
 app.use(express.json());
+
+// Serve static files
+app.use('/public', express.static(path.join(__dirname, '../public')));
 
 import authRoutes from './routes/auth.routes';
 import hotelRoutes from './routes/hotel.routes';
@@ -18,9 +23,17 @@ import inventoryRoutes from './routes/inventory.routes';
 import availabilityRoutes from './routes/availability.routes';
 import bookingRoutes from './routes/booking.routes';
 import paymentRoutes from './routes/payment.routes';
+import userRoutes from './routes/user.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+import publicRoutes from './routes/public.routes';
+import adminRoutes from './routes/admin.routes';
 
 // Routes
+app.use('/public', publicRoutes);
+app.use('/admin', adminRoutes);
 app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/dashboard', dashboardRoutes);
 app.use('/hotels', hotelRoutes);
 app.use('/room-types', roomTypeRoutes);
 app.use('/inventory', inventoryRoutes);

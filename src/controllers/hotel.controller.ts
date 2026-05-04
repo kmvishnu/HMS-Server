@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { HotelService } from '../services/hotel.service';
 import { catchAsync } from '../utils/catchAsync';
+import { AppError } from '../utils/AppError';
 
 const hotelService = new HotelService();
 
@@ -15,13 +16,60 @@ export const getHotelDetails = catchAsync(async (req: Request, res: Response) =>
 });
 
 export const createHotel = catchAsync(async (req: Request, res: Response) => {
-  const { name, location } = req.body;
-  const hotel = await hotelService.createHotel(name, location);
+  const { name, location, ownerId } = req.body;
+  const files = req.files as Express.Multer.File[];
+  
+  const imageUrls = files ? files.map(file => `data:${file.mimetype};base64,${file.buffer.toString('base64')}`) : [];
+
+  const parsedOwnerId = ownerId ? parseInt(ownerId, 10) : null;
+  const hotel = await hotelService.createHotel(name, location, parsedOwnerId as unknown as number, imageUrls);
   res.status(201).json({ success: true, data: hotel });
 });
 
+export const updateHotel = catchAsync(async (req: Request, res: Response) => {
+  const hotelId = parseInt(req.params.id as string, 10);
+  const { name, location, ownerId } = req.body;
+  const hotel = await hotelService.updateHotel(hotelId, name, location, ownerId);
+  res.status(200).json({ success: true, data: hotel });
+});
+
 export const createRoomType = catchAsync(async (req: Request, res: Response) => {
-  const { hotelId, name, totalRooms } = req.body;
-  const roomType = await hotelService.createRoomType(hotelId, name, totalRooms);
+  const { hotelId, name, totalRooms, price } = req.body;
+  const roomType = await hotelService.createRoomType(hotelId, name, totalRooms, price);
   res.status(201).json({ success: true, data: roomType });
+});
+
+export const addImage = catchAsync(async (req: Request, res: Response) => {
+  const file = req.file;
+  if (!file) throw new AppError('Image file is required', 400);
+
+  const newUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+  const hotelId = parseInt(req.params.id as string, 10);
+  
+  const hotel = await hotelService.addHotelImage(hotelId, req.user!.userId, req.user!.role, newUrl);
+  res.status(200).json({ success: true, data: hotel });
+});
+
+export const replaceImage = catchAsync(async (req: Request, res: Response) => {
+  const file = req.file;
+  if (!file) throw new AppError('Image file is required', 400);
+
+  const { oldImageUrl } = req.body;
+  if (!oldImageUrl) throw new AppError('oldImageUrl is required', 400);
+
+  const newUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+  const hotelId = parseInt(req.params.id as string, 10);
+
+  const hotel = await hotelService.replaceHotelImage(hotelId, req.user!.userId, req.user!.role, oldImageUrl, newUrl);
+  res.status(200).json({ success: true, data: hotel });
+});
+
+export const deleteImage = catchAsync(async (req: Request, res: Response) => {
+  const { imageUrl } = req.body;
+  if (!imageUrl) throw new AppError('imageUrl is required', 400);
+
+  const hotelId = parseInt(req.params.id as string, 10);
+
+  const hotel = await hotelService.deleteHotelImage(hotelId, req.user!.userId, req.user!.role, imageUrl);
+  res.status(200).json({ success: true, data: hotel });
 });

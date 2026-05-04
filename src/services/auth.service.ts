@@ -25,6 +25,25 @@ export class AuthService {
     return user;
   }
 
+  async setupFirstAdmin(name: string, email: string, passwordPlain: string) {
+    // Check if any admin exists
+    const hasAdmin = await this.userRepository.hasAdmin();
+    if (hasAdmin) {
+      throw new AppError('An Admin already exists', 400);
+    }
+
+    const existingUser = await this.userRepository.findByEmail(email);
+    if (existingUser) {
+      throw new AppError('Email already in use', 400);
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(passwordPlain, salt);
+
+    const user = await this.userRepository.create(name, email, passwordHash, Role.ADMIN);
+    return user;
+  }
+
   async login(email: string, passwordPlain: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {

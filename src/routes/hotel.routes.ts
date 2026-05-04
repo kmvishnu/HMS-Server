@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { getAllHotels, getHotelDetails, createHotel } from '../controllers/hotel.controller';
+import { getAllHotels, getHotelDetails, createHotel, addImage, replaceImage, deleteImage, updateHotel } from '../controllers/hotel.controller';
 import { protect } from '../middleware/auth.middleware';
 import { restrictTo } from '../middleware/role.middleware';
 import { Role } from '../types';
 import { validate } from '../middleware/validate.middleware';
-import { createHotelSchema, getHotelParamsSchema } from '../validations/hotel.validation';
+import { createHotelSchema, getHotelParamsSchema, updateHotelSchema } from '../validations/hotel.validation';
+import { uploadHotelImages } from '../middleware/upload.middleware';
 
 const router = Router();
 
@@ -13,6 +14,39 @@ router.get('/:id', validate(getHotelParamsSchema), getHotelDetails);
 
 // Protected routes
 router.use(protect);
-router.post('/', restrictTo(Role.ADMIN), validate(createHotelSchema), createHotel);
+router.post(
+  '/', 
+  restrictTo(Role.ADMIN), 
+  uploadHotelImages.array('images', 5),
+  validate(createHotelSchema), 
+  createHotel
+);
+
+router.put(
+  '/:id',
+  restrictTo(Role.ADMIN),
+  validate(updateHotelSchema),
+  updateHotel
+);
+
+router.post(
+  '/:id/images',
+  restrictTo(Role.ADMIN, Role.HOTEL_OWNER),
+  uploadHotelImages.single('image'),
+  addImage
+);
+
+router.put(
+  '/:id/images/replace',
+  restrictTo(Role.ADMIN, Role.HOTEL_OWNER),
+  uploadHotelImages.single('image'),
+  replaceImage
+);
+
+router.delete(
+  '/:id/images',
+  restrictTo(Role.ADMIN, Role.HOTEL_OWNER),
+  deleteImage
+);
 
 export default router;
