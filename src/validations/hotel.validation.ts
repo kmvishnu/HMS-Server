@@ -16,6 +16,18 @@ export const updateHotelSchema = z.object({
   }),
 });
 
+export const updateVisibilitySchema = z.object({
+  body: z.object({
+    isVisible: z.boolean(),
+  }),
+});
+
+export const updateFeaturesSchema = z.object({
+  body: z.object({
+    features: z.array(z.string()),
+  }),
+});
+
 export const createRoomTypeSchema = z.object({
   body: z.object({
     hotelId: z.number().int().positive('Hotel ID must be positive'),

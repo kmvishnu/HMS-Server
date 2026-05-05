@@ -3,7 +3,11 @@ import { AppError } from '../utils/AppError';
 import { BookingStatus } from '../types';
 
 export class BookingRepository {
-  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string) {
+  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[] = []) {
+    return this.createBookingWithGuests(userId, roomTypeId, checkIn, checkOut, guests);
+  }
+
+  async createBookingWithGuests(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[]) {
     const client = await pool.connect();
     
     try {
@@ -61,11 +65,21 @@ export class BookingRepository {
         roomTypeId, 
         checkIn, 
         checkOut, 
-        BookingStatus.CONFIRMED // Assuming CONFIRMED for MVP without real payment
+        BookingStatus.CONFIRMED
       ]);
 
+      const booking = bookingResult.rows[0];
+
+      // 6. Insert guests
+      for (const guest of guests) {
+        await client.query(
+          'INSERT INTO booking_guests (booking_id, name, age) VALUES ($1, $2, $3)',
+          [booking.id, guest.name, guest.age]
+        );
+      }
+
       await client.query('COMMIT');
-      return bookingResult.rows[0];
+      return booking;
 
     } catch (error) {
       await client.query('ROLLBACK');
@@ -86,5 +100,51 @@ export class BookingRepository {
     `;
     const { rows } = await pool.query(query, [userId]);
     return rows;
+  }
+
+  async getHotelBookings(hotelId: number, filter?: string) {
+    let query = `
+      SELECT b.*, rt.name as room_type_name, u.name as user_name, u.email as user_email
+      FROM bookings b
+      JOIN room_types rt ON b.room_type_id = rt.id
+      JOIN users u ON b.user_id = u.id
+      WHERE rt.hotel_id = $1
+    `;
+    const params: any[] = [hotelId];
+
+    if (filter === 'today') {
+      query += ' AND (b.check_in = CURRENT_DATE OR b.check_out = CURRENT_DATE)';
+    } else if (filter === 'upcoming') {
+      query += ' AND b.check_in > CURRENT_DATE';
+    } else if (filter === 'checked-in') {
+      query += " AND b.status = 'CHECKED_IN'";
+    }
+
+    query += ' ORDER BY b.check_in ASC';
+    const { rows } = await pool.query(query, params);
+    
+    // Add guests to each booking
+    for (const booking of rows) {
+      booking.guests = await this.getBookingGuests(booking.id);
+    }
+    
+    return rows;
+  }
+
+  async getBookingGuests(bookingId: number) {
+    const { rows } = await pool.query('SELECT * FROM booking_guests WHERE booking_id = $1', [bookingId]);
+    return rows;
+  }
+
+  async updateBookingStatus(id: number, status: string) {
+    const query = 'UPDATE bookings SET status = $2 WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id, status]);
+    return rows[0];
+  }
+
+  async findById(id: number) {
+    const query = 'SELECT * FROM bookings WHERE id = $1';
+    const { rows } = await pool.query(query, [id]);
+    return rows[0] || null;
   }
 }

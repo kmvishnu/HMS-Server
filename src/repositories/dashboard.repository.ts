@@ -84,13 +84,11 @@ export class DashboardRepository {
     const bookedRoomsToday = today.rows.length;
 
     return {
-      todaysBookings: today.rows,
+      todayBookings: today.rows,
       upcomingBookings: upcoming.rows,
       occupancy: {
         totalRooms,
-        bookedRoomsToday,
-        availableRoomsToday: totalRooms - bookedRoomsToday,
-        occupancyRate: totalRooms ? ((bookedRoomsToday / totalRooms) * 100).toFixed(2) + '%' : '0%'
+        bookedToday: bookedRoomsToday
       }
     };
   }

@@ -11,10 +11,12 @@ const fileFilter = (req: any, file: any, cb: any) => {
   }
 };
 
-export const uploadHotelImages = multer({
+export const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
     fileSize: 1 * 1024 * 1024 // 1 MB
   }
 });
+
+export const uploadHotelImages = upload;

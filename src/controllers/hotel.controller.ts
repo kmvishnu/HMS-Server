@@ -10,6 +10,41 @@ export const getAllHotels = catchAsync(async (req: Request, res: Response) => {
   res.status(200).json({ success: true, data: hotels });
 });
 
+export const updateVisibility = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { isVisible } = req.body;
+  const user = (req as any).user;
+
+  // Validation: Owner can only update their own hotel
+  if (user.role === 'HOTEL_OWNER' && user.hotelId !== parseInt(id as string)) {
+    throw new AppError('Unauthorized access to this hotel', 403);
+  }
+
+  const hotel = await hotelService.updateVisibility(parseInt(id as string), isVisible);
+
+  res.status(200).json({
+    success: true,
+    data: hotel
+  });
+});
+
+export const updateFeatures = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { features } = req.body;
+  const user = (req as any).user;
+
+  if (user.role === 'HOTEL_OWNER' && user.hotelId !== parseInt(id as string)) {
+    throw new AppError('Unauthorized access to this hotel', 403);
+  }
+
+  const hotel = await hotelService.updateFeatures(parseInt(id as string), features);
+
+  res.status(200).json({
+    success: true,
+    data: hotel
+  });
+});
+
 export const getHotelDetails = catchAsync(async (req: Request, res: Response) => {
   const hotel = await hotelService.getHotelDetails(Number(req.params.id));
   res.status(200).json({ success: true, data: hotel });

@@ -6,6 +6,7 @@ export class PublicRepository {
       SELECT h.id, h.name, h.location, h.image_urls,
              (SELECT MIN(price) FROM room_types rt WHERE rt.hotel_id = h.id) as starting_price
       FROM hotels h
+      WHERE h.is_visible = TRUE
       ORDER BY h.created_at DESC
       LIMIT 5
     `;
@@ -17,6 +18,7 @@ export class PublicRepository {
     const query = `
       SELECT location, COUNT(*) as hotel_count
       FROM hotels
+      WHERE is_visible = TRUE
       GROUP BY location
       ORDER BY hotel_count DESC
       LIMIT 5
@@ -30,7 +32,7 @@ export class PublicRepository {
       SELECT h.id, h.name, h.location, h.image_urls,
              (SELECT MIN(price) FROM room_types rt WHERE rt.hotel_id = h.id) as starting_price
       FROM hotels h
-      WHERE 1=1
+      WHERE h.is_visible = TRUE
     `;
     const params: any[] = [];
     let paramIndex = 1;

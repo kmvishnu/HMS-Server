@@ -85,4 +85,76 @@ export class HotelRepository {
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
+
+  async updateVisibility(id: number, isVisible: boolean) {
+    const query = 'UPDATE hotels SET is_visible = $2 WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id, isVisible]);
+    return rows[0];
+  }
+
+  async updateFeatures(id: number, features: string[]) {
+    const query = 'UPDATE hotels SET features = $2 WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id, features]);
+    return rows[0];
+  }
+
+  async addRoomTypeImage(roomTypeId: number, imageUrl: string) {
+    const query = 'INSERT INTO room_type_images (room_type_id, image_url) VALUES ($1, $2) RETURNING *';
+    const { rows } = await pool.query(query, [roomTypeId, imageUrl]);
+    return rows[0];
+  }
+
+  async getRoomTypeImages(roomTypeId: number) {
+    const query = 'SELECT * FROM room_type_images WHERE room_type_id = $1';
+    const { rows } = await pool.query(query, [roomTypeId]);
+    return rows;
+  }
+
+  async deleteRoomTypeImage(id: number) {
+    const query = 'DELETE FROM room_type_images WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  }
+
+  async updateRoomType(id: number, name?: string, totalRooms?: number, price?: number) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      fields.push(`name = $${paramIndex}`);
+      values.push(name);
+      paramIndex++;
+    }
+
+    if (totalRooms !== undefined) {
+      fields.push(`total_rooms = $${paramIndex}`);
+      values.push(totalRooms);
+      paramIndex++;
+    }
+
+    if (price !== undefined) {
+      fields.push(`price = $${paramIndex}`);
+      values.push(price);
+      paramIndex++;
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+    const query = `
+      UPDATE room_types 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
+  async deleteRoomType(id: number) {
+    const query = 'DELETE FROM room_types WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  }
 }

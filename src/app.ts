@@ -27,6 +27,7 @@ import userRoutes from './routes/user.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import publicRoutes from './routes/public.routes';
 import adminRoutes from './routes/admin.routes';
+import staffRoutes from './routes/staff.routes';
 
 // Routes
 app.use('/public', publicRoutes);
@@ -40,6 +41,7 @@ app.use('/inventory', inventoryRoutes);
 app.use('/availability', availabilityRoutes);
 app.use('/bookings', bookingRoutes);
 app.use('/payments', paymentRoutes);
+app.use('/staff', staffRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ success: true, message: 'Server is running' });

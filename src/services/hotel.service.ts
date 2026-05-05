@@ -41,6 +41,38 @@ export class HotelService {
     return await this.hotelRepository.createRoomType(hotelId, name, totalRooms, price);
   }
 
+  async updateVisibility(id: number, isVisible: boolean) {
+    const hotel = await this.hotelRepository.findById(id);
+    if (!hotel) throw new AppError('Hotel not found', 404);
+    return await this.hotelRepository.updateVisibility(id, isVisible);
+  }
+
+  async updateFeatures(id: number, features: string[]) {
+    const hotel = await this.hotelRepository.findById(id);
+    if (!hotel) throw new AppError('Hotel not found', 404);
+    return await this.hotelRepository.updateFeatures(id, features);
+  }
+
+  async updateRoomType(id: number, name?: string, totalRooms?: number, price?: number) {
+    return await this.hotelRepository.updateRoomType(id, name, totalRooms, price);
+  }
+
+  async deleteRoomType(id: number) {
+    return await this.hotelRepository.deleteRoomType(id);
+  }
+
+  async addRoomTypeImage(roomTypeId: number, imageUrl: string) {
+    const images = await this.hotelRepository.getRoomTypeImages(roomTypeId);
+    if (images.length >= 3) {
+      throw new AppError('Maximum 3 images allowed per room type', 400);
+    }
+    return await this.hotelRepository.addRoomTypeImage(roomTypeId, imageUrl);
+  }
+
+  async deleteRoomTypeImage(id: number) {
+    return await this.hotelRepository.deleteRoomTypeImage(id);
+  }
+
   async addHotelImage(hotelId: number, userId: number, role: string, fileUrl: string) {
     const hotel = await this.hotelRepository.findById(hotelId);
     if (!hotel) throw new AppError('Hotel not found', 404);

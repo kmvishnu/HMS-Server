@@ -103,6 +103,48 @@ export class UserRepository {
     return rows[0];
   }
 
+  async findStaffByHotelId(hotelId: number) {
+    const query = "SELECT id, name, email, role, hotel_id as \"hotelId\", created_at FROM users WHERE role = 'HOTEL_STAFF' AND hotel_id = $1";
+    const { rows } = await pool.query(query, [hotelId]);
+    return rows;
+  }
+
+  async updateStaff(id: number, updates: { name?: string, email?: string, passwordHash?: string }) {
+    const fields: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (updates.name !== undefined) {
+      fields.push(`name = $${paramIndex}`);
+      values.push(updates.name);
+      paramIndex++;
+    }
+
+    if (updates.email !== undefined) {
+      fields.push(`email = $${paramIndex}`);
+      values.push(updates.email);
+      paramIndex++;
+    }
+
+    if (updates.passwordHash !== undefined) {
+      fields.push(`password_hash = $${paramIndex}`);
+      values.push(updates.passwordHash);
+      paramIndex++;
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, name, email, role, hotel_id as "hotelId"
+    `;
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
+
   async deleteUser(id: number) {
     const query = 'DELETE FROM users WHERE id = $1 RETURNING id';
     const { rows } = await pool.query(query, [id]);

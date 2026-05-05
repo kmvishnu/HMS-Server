@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { getAllHotels, getHotelDetails, createHotel, addImage, replaceImage, deleteImage, updateHotel } from '../controllers/hotel.controller';
+import { getAllHotels, getHotelDetails, createHotel, addImage, replaceImage, deleteImage, updateHotel, updateVisibility, updateFeatures } from '../controllers/hotel.controller';
 import { protect } from '../middleware/auth.middleware';
 import { restrictTo } from '../middleware/role.middleware';
 import { Role } from '../types';
 import { validate } from '../middleware/validate.middleware';
-import { createHotelSchema, getHotelParamsSchema, updateHotelSchema } from '../validations/hotel.validation';
+import { createHotelSchema, getHotelParamsSchema, updateHotelSchema, updateVisibilitySchema, updateFeaturesSchema } from '../validations/hotel.validation';
 import { uploadHotelImages } from '../middleware/upload.middleware';
 
 const router = Router();
@@ -22,13 +22,13 @@ router.post(
   createHotel
 );
 
-router.put(
-  '/:id',
-  restrictTo(Role.ADMIN),
-  validate(updateHotelSchema),
-  updateHotel
-);
+router.put('/:id', restrictTo(Role.ADMIN), validate(updateHotelSchema), updateHotel);
 
+// Owner/Admin Management
+router.put('/:id/visibility', restrictTo(Role.ADMIN, Role.HOTEL_OWNER), validate(updateVisibilitySchema), updateVisibility);
+router.put('/:id/features', restrictTo(Role.ADMIN, Role.HOTEL_OWNER), validate(updateFeaturesSchema), updateFeatures);
+
+// Images management
 router.post(
   '/:id/images',
   restrictTo(Role.ADMIN, Role.HOTEL_OWNER),
