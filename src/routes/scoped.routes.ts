@@ -9,6 +9,7 @@ import { getHotelBookings, checkin, checkout, createBooking } from '../controlle
 import { updateVisibility, updateFeatures, addImage, deleteImage } from '../controllers/hotel.controller';
 import { createRoomType, updateRoomType, deleteRoomType, addRoomTypeImage, deleteRoomTypeImage, getRoomTypes } from '../controllers/room-type.controller';
 import { updateInventory, getAvailability } from '../controllers/inventory.controller';
+import { upload } from '../middleware/upload.middleware';
 
 const router = Router({ mergeParams: true }); // Merge params to access :hotelId
 
@@ -35,15 +36,15 @@ router.delete('/room-types/:id', restrictTo(Role.HOTEL_OWNER), deleteRoomType);
 // Room Type Images
 // Note: These use the room-type id, not the hotel id in the path for the specific resource,
 // but they are scoped under /hotel/:hotelId/room-types/...
-router.post('/room-types/:id/images', restrictTo(Role.HOTEL_OWNER), addRoomTypeImage);
-router.delete('/room-types/images/:imageId', restrictTo(Role.HOTEL_OWNER), deleteRoomTypeImage);
+router.post('/room-types/:id/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), upload.single('image'), addRoomTypeImage);
+router.delete('/room-types/images/:imageId', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), deleteRoomTypeImage);
 
 // Hotel Settings
-router.put('/visibility', restrictTo(Role.HOTEL_OWNER), updateVisibility);
-router.put('/features', restrictTo(Role.HOTEL_OWNER), updateFeatures);
-router.post('/images', restrictTo(Role.HOTEL_OWNER), addImage);
+router.put('/visibility', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateVisibility);
+router.put('/features', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateFeatures);
+router.post('/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), upload.single('image'), addImage);
 // Note: Delete hotel image uses body for imageUrl
-router.delete('/images', restrictTo(Role.HOTEL_OWNER), deleteImage);
+router.delete('/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), deleteImage);
 
 // Inventory
 router.patch('/inventory', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateInventory);
