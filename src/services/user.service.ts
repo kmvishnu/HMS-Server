@@ -23,13 +23,7 @@ export class UserService {
     return user;
   }
 
-  async getUsers(requestUserRole: string, requestUserHotelId: number | null, queryRole?: string) {
-    if (requestUserRole === 'HOTEL_OWNER') {
-      // Hotel owner can only view STAFF for their own hotel
-      if (!requestUserHotelId) return [];
-      return await this.userRepository.getUsers('STAFF', requestUserHotelId);
-    }
-    
+  async getUsers(queryRole?: string) {
     // Admin can view everyone, filter by role if provided
     return await this.userRepository.getUsers(queryRole, undefined);
   }
@@ -61,16 +55,10 @@ export class UserService {
     });
   }
 
-  async deleteUser(id: number, requestUserRole: string, requestUserHotelId: number | null) {
+  async deleteUser(id: number) {
     const userToDelete = await this.userRepository.findById(id);
     if (!userToDelete) {
       throw new AppError('User not found', 404);
-    }
-
-    if (requestUserRole === Role.HOTEL_OWNER) {
-      if (userToDelete.role !== Role.STAFF || userToDelete.hotel_id !== requestUserHotelId) {
-        throw new AppError('You can only delete staff members from your own hotel', 403);
-      }
     }
 
     await this.userRepository.deleteUser(id);

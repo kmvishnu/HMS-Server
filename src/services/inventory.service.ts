@@ -35,4 +35,8 @@ export class InventoryService {
     }
     return await this.inventoryRepository.getAvailability(hotelId, checkIn, checkOut);
   }
+
+  async updateInventory(roomTypeId: number, startDate: string, endDate: string, availableCount: number) {
+    return await this.inventoryRepository.updateInventory(roomTypeId, startDate, endDate, availableCount);
+  }
 }

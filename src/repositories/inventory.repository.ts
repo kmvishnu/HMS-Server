@@ -37,4 +37,17 @@ export class InventoryRepository {
     const { rows } = await pool.query(query, [hotelId, checkIn, checkOut]);
     return rows;
   }
+
+  async updateInventory(roomTypeId: number, startDate: string, endDate: string, availableCount: number) {
+    const query = `
+      UPDATE room_inventory
+      SET available_count = $4
+      WHERE room_type_id = $1
+      AND date >= $2::date
+      AND date <= $3::date
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, [roomTypeId, startDate, endDate, availableCount]);
+    return rows;
+  }
 }

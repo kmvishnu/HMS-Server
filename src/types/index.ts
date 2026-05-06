@@ -1,7 +1,6 @@
 export interface JwtPayload {
   userId: number;
   role: string;
-  hotelId: number | null;
 }
 
 declare global {

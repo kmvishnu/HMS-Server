@@ -24,10 +24,10 @@ export const createBooking = catchAsync(async (req: Request, res: Response) => {
 
 export const getHotelBookings = catchAsync(async (req: Request, res: Response) => {
   const { filter } = req.query;
-  const hotelId = (req as any).user.hotelId;
+  const hotelId = parseInt(req.params.hotelId as string, 10);
 
-  if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'User must be linked to a hotel' });
+  if (isNaN(hotelId)) {
+    return res.status(400).json({ success: false, message: 'Invalid hotel ID' });
   }
 
   const bookings = await bookingService.getHotelBookings(hotelId, filter as string);

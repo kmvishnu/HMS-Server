@@ -6,19 +6,24 @@ import { AppError } from '../utils/AppError';
 const hotelService = new HotelService();
 
 export const createRoomType = catchAsync(async (req: Request, res: Response) => {
-  const { hotelId, name, totalRooms, price } = req.body;
-  const user = (req as any).user;
-
-  // If role is HOTEL_OWNER, verify hotelId
-  if (user.role === 'HOTEL_OWNER' && user.hotelId !== hotelId) {
-    throw new AppError('Unauthorized access to this hotel', 403);
-  }
+  const hotelId = parseInt(req.params.hotelId as string, 10);
+  const { name, totalRooms, price } = req.body;
 
   const roomType = await hotelService.createRoomType(hotelId, name, totalRooms, price);
 
   res.status(201).json({
     success: true,
     data: roomType
+  });
+});
+
+export const getRoomTypes = catchAsync(async (req: Request, res: Response) => {
+  const hotelId = parseInt(req.params.hotelId as string, 10);
+  const roomTypes = await hotelService.getRoomTypes(hotelId);
+
+  res.status(200).json({
+    success: true,
+    data: roomTypes
   });
 });
 
@@ -48,6 +53,7 @@ export const deleteRoomType = catchAsync(async (req: Request, res: Response) => 
 export const addRoomTypeImage = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const file = req.file;
+  debugger
 
   if (!file) {
     throw new AppError('Please upload an image', 400);

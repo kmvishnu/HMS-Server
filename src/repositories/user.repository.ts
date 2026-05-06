@@ -104,8 +104,19 @@ export class UserRepository {
   }
 
   async findStaffByHotelId(hotelId: number) {
-    const query = "SELECT id, name, email, role, hotel_id as \"hotelId\", created_at FROM users WHERE role = 'HOTEL_STAFF' AND hotel_id = $1";
+    const query = "SELECT id, name, email, role, hotel_id as \"hotelId\", created_at FROM users WHERE role IN ('STAFF', 'HOTEL_STAFF') AND hotel_id = $1";
     const { rows } = await pool.query(query, [hotelId]);
+    return rows;
+  }
+
+  async findStaffByOwnerId(ownerId: number) {
+    const query = `
+      SELECT u.id, u.name, u.email, u.role, u.hotel_id as "hotelId", u.created_at, h.name as hotel_name
+      FROM users u
+      JOIN hotels h ON u.hotel_id = h.id
+      WHERE h.owner_id = $1 AND u.role IN ('STAFF', 'HOTEL_STAFF')
+    `;
+    const { rows } = await pool.query(query, [ownerId]);
     return rows;
   }
 

@@ -12,6 +12,14 @@ export class HotelService {
     return await this.hotelRepository.findAll();
   }
 
+  async getOwnedHotels(ownerId: number) {
+    return await this.hotelRepository.getHotelsByOwner(ownerId);
+  }
+
+  async getRoomTypes(hotelId: number) {
+    return await this.hotelRepository.getRoomTypesByHotelId(hotelId);
+  }
+
   async getHotelDetails(id: number) {
     const hotel = await this.hotelRepository.findById(id);
     if (!hotel) {

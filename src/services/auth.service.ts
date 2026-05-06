@@ -55,7 +55,7 @@ export class AuthService {
       throw new AppError('Invalid credentials', 401);
     }
 
-    const tokens = this.generateTokens(user.id, user.role, user.hotel_id);
+    const tokens = this.generateTokens(user.id, user.role);
 
     return {
       user: {
@@ -82,7 +82,7 @@ export class AuthService {
         throw new AppError('User no longer exists', 401);
       }
 
-      const tokens = this.generateTokens(user.id, user.role, user.hotel_id);
+      const tokens = this.generateTokens(user.id, user.role);
       
       return {
         user: {
@@ -99,8 +99,8 @@ export class AuthService {
     }
   }
 
-  private generateTokens(userId: number, role: string, hotelId: number | null) {
-    const payload = { userId, role, hotelId };
+  private generateTokens(userId: number, role: string) {
+    const payload = { userId, role };
     
     const accessToken = jwt.sign(
       payload,

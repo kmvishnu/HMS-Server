@@ -5,12 +5,26 @@ import { Role } from '../types';
 
 export class StaffService {
   private userRepository: UserRepository;
+  private hotelRepository: any;
 
   constructor() {
     this.userRepository = new UserRepository();
+    // Use dynamic import or just require to avoid circular dependencies if any
+    const { HotelRepository } = require('../repositories/hotel.repository');
+    this.hotelRepository = new HotelRepository();
   }
 
-  async createStaff(name: string, email: string, passwordPlain: string, hotelId: number) {
+  private async verifyOwner(hotelId: number, ownerId: number) {
+    const hotel = await this.hotelRepository.findById(hotelId);
+    if (!hotel || hotel.owner_id !== ownerId) {
+      throw new AppError('You do not own this hotel or it does not exist', 403);
+    }
+    return hotel;
+  }
+
+  async createStaff(name: string, email: string, passwordPlain: string, hotelId: number, ownerId: number) {
+    await this.verifyOwner(hotelId, ownerId);
+
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
       throw new AppError('Email already in use', 400);
@@ -19,17 +33,29 @@ export class StaffService {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(passwordPlain, salt);
 
-    return await this.userRepository.create(name, email, passwordHash, 'HOTEL_STAFF', hotelId);
+    return await this.userRepository.create(name, email, passwordHash, Role.STAFF, hotelId);
+  }
+
+  async getStaffByOwnerId(ownerId: number) {
+    return await this.userRepository.findStaffByOwnerId(ownerId);
   }
 
   async getStaffByHotelId(hotelId: number) {
     return await this.userRepository.findStaffByHotelId(hotelId);
   }
 
-  async updateStaff(id: number, hotelId: number, updates: { name?: string, email?: string, passwordPlain?: string }) {
+  async updateStaff(id: number, hotelId: number | undefined, ownerId: number, updates: { name?: string, email?: string, passwordPlain?: string }) {
     const staff = await this.userRepository.findById(id);
-    if (!staff || staff.hotel_id !== hotelId || staff.role !== 'HOTEL_STAFF') {
-      throw new AppError('Staff member not found or access denied', 404);
+    if (!staff || (staff.role !== 'HOTEL_STAFF' && staff.role !== 'STAFF')) {
+      throw new AppError('Staff member not found', 404);
+    }
+
+    // Verify owner owns the staff's CURRENT hotel
+    await this.verifyOwner(staff.hotel_id, ownerId);
+
+    // If changing hotel, verify owner owns the NEW hotel too
+    if (hotelId !== undefined && hotelId !== staff.hotel_id) {
+      await this.verifyOwner(hotelId, ownerId);
     }
 
     if (updates.email && updates.email !== staff.email) {
@@ -52,11 +78,14 @@ export class StaffService {
     });
   }
 
-  async deleteStaff(id: number, hotelId: number) {
+  async deleteStaff(id: number, ownerId: number) {
     const staff = await this.userRepository.findById(id);
-    if (!staff || staff.hotel_id !== hotelId || staff.role !== 'HOTEL_STAFF') {
-      throw new AppError('Staff member not found or access denied', 404);
+    if (!staff || (staff.role !== 'HOTEL_STAFF' && staff.role !== 'STAFF')) {
+      throw new AppError('Staff member not found', 404);
     }
+
+    // Verify owner owns the staff's hotel
+    await this.verifyOwner(staff.hotel_id, ownerId);
 
     return await this.userRepository.deleteUser(id);
   }

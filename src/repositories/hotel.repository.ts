@@ -13,6 +13,12 @@ export class HotelRepository {
     return rows[0] || null;
   }
 
+  async getHotelsByOwner(ownerId: number) {
+    const query = 'SELECT * FROM hotels WHERE owner_id = $1';
+    const { rows } = await pool.query(query, [ownerId]);
+    return rows;
+  }
+
   async createHotel(name: string, location: string, ownerId: number, imageUrls: string[]) {
     const query = `
       INSERT INTO hotels (name, location, owner_id, image_urls)
@@ -34,7 +40,14 @@ export class HotelRepository {
   }
 
   async getRoomTypesByHotelId(hotelId: number) {
-    const query = 'SELECT * FROM room_types WHERE hotel_id = $1';
+    const query = `
+      SELECT rt.*, 
+             COALESCE(json_agg(rti.image_url) FILTER (WHERE rti.image_url IS NOT NULL), '[]') as images
+      FROM room_types rt
+      LEFT JOIN room_type_images rti ON rt.id = rti.room_type_id
+      WHERE rt.hotel_id = $1
+      GROUP BY rt.id
+    `;
     const { rows } = await pool.query(query, [hotelId]);
     return rows;
   }

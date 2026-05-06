@@ -10,9 +10,9 @@ const router = Router();
 
 router.use(protect);
 
-router.get('/', restrictTo(Role.ADMIN, Role.HOTEL_OWNER), getAllUsers);
-router.post('/', restrictTo(Role.ADMIN, Role.HOTEL_OWNER), validate(createUserSchema), createUser);
+router.get('/', restrictTo(Role.ADMIN), getAllUsers);
+router.post('/', restrictTo(Role.ADMIN), validate(createUserSchema), createUser);
 router.put('/:id', restrictTo(Role.ADMIN), validate(updateUserSchema), updateUser);
-router.delete('/:id', restrictTo(Role.ADMIN, Role.HOTEL_OWNER), deleteUser);
+router.delete('/:id', restrictTo(Role.ADMIN), deleteUser);
 
 export default router;

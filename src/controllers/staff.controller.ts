@@ -5,14 +5,14 @@ import { catchAsync } from '../utils/catchAsync';
 const staffService = new StaffService();
 
 export const createStaff = catchAsync(async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
-  const hotelId = (req as any).user.hotelId;
+  const { name, email, password, hotelId } = req.body;
+  const ownerId = (req as any).user.userId;
 
   if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'Owner must be linked to a hotel' });
+    return res.status(400).json({ success: false, message: 'hotelId is required' });
   }
 
-  const staff = await staffService.createStaff(name, email, password, hotelId);
+  const staff = await staffService.createStaff(name, email, password, hotelId, ownerId);
 
   res.status(201).json({
     success: true,
@@ -21,13 +21,9 @@ export const createStaff = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getStaffList = catchAsync(async (req: Request, res: Response) => {
-  const hotelId = (req as any).user.hotelId;
+  const ownerId = (req as any).user.userId;
 
-  if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'Owner must be linked to a hotel' });
-  }
-
-  const staff = await staffService.getStaffByHotelId(hotelId);
+  const staff = await staffService.getStaffByOwnerId(ownerId);
 
   res.status(200).json({
     success: true,
@@ -37,14 +33,10 @@ export const getStaffList = catchAsync(async (req: Request, res: Response) => {
 
 export const updateStaff = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const hotelId = (req as any).user.hotelId;
-  const { name, email, password } = req.body;
+  const ownerId = (req as any).user.userId;
+  const { name, email, password, hotelId } = req.body;
 
-  if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'Owner must be linked to a hotel' });
-  }
-
-  const staff = await staffService.updateStaff(parseInt(id as string), hotelId, { 
+  const staff = await staffService.updateStaff(parseInt(id as string), hotelId, ownerId, { 
     name, 
     email, 
     passwordPlain: password 
@@ -58,13 +50,9 @@ export const updateStaff = catchAsync(async (req: Request, res: Response) => {
 
 export const deleteStaff = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const hotelId = (req as any).user.hotelId;
+  const ownerId = (req as any).user.userId;
 
-  if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'Owner must be linked to a hotel' });
-  }
-
-  await staffService.deleteStaff(parseInt(id as string), hotelId);
+  await staffService.deleteStaff(parseInt(id as string), ownerId);
 
   res.status(204).json({
     success: true,
