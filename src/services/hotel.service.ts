@@ -20,12 +20,12 @@ export class HotelService {
     return await this.hotelRepository.getRoomTypesByHotelId(hotelId);
   }
 
-  async getHotelDetails(id: number) {
+  async getHotelDetails(id: number, checkIn?: string, checkOut?: string) {
     const hotel = await this.hotelRepository.findById(id);
-    if (!hotel) {
+    if (!hotel || !hotel.is_visible) {
       throw new AppError('Hotel not found', 404);
     }
-    const roomTypes = await this.hotelRepository.getRoomTypesByHotelId(id);
+    const roomTypes = await this.hotelRepository.getRoomTypesByHotelId(id, checkIn, checkOut);
     return { ...hotel, roomTypes };
   }
 

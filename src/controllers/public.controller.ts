@@ -14,18 +14,41 @@ export const getHomeData = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const searchHotels = catchAsync(async (req: Request, res: Response) => {
-  const { location, checkIn, checkOut } = req.query;
-  const hotels = await publicService.searchHotels(
-    location as string | undefined, 
-    checkIn as string | undefined, 
-    checkOut as string | undefined
-  );
+  const { location, checkIn, checkOut, guests, minPrice, maxPrice, features, page, limit } = req.query;
+  
+  const hotels = await publicService.searchHotels({
+    location: location as string,
+    checkIn: checkIn as string,
+    checkOut: checkOut as string,
+    guests: guests ? parseInt(guests as string, 10) : undefined,
+    minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
+    maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
+    features: features ? (features as string).split(',') : undefined,
+    page: page ? parseInt(page as string, 10) : 1,
+    limit: limit ? parseInt(limit as string, 10) : 10
+  });
+
   res.status(200).json({ success: true, data: hotels });
+});
+
+export const getLocations = catchAsync(async (req: Request, res: Response) => {
+  const { q } = req.query;
+  if (!q) {
+    return res.status(200).json({ success: true, data: [] });
+  }
+  const locations = await publicService.getLocations(q as string);
+  res.status(200).json({ success: true, data: locations });
 });
 
 export const getHotelDetails = catchAsync(async (req: Request, res: Response) => {
   const hotelId = parseInt(req.params.id as string, 10);
-  const hotel = await hotelService.getHotelDetails(hotelId);
+  const { checkIn, checkOut } = req.query;
+  
+  const hotel = await hotelService.getHotelDetails(
+    hotelId, 
+    checkIn as string | undefined, 
+    checkOut as string | undefined
+  );
   res.status(200).json({ success: true, data: hotel });
 });
 

@@ -39,17 +39,45 @@ export class HotelRepository {
     return rows[0];
   }
 
-  async getRoomTypesByHotelId(hotelId: number) {
-    const query = `
+  async getRoomTypesByHotelId(hotelId: number, checkIn?: string, checkOut?: string) {
+    let query = `
       SELECT rt.*, 
              COALESCE(json_agg(rti.image_url) FILTER (WHERE rti.image_url IS NOT NULL), '[]') as images
+    `;
+
+    if (checkIn && checkOut) {
+      query += `,
+        NOT EXISTS (
+          SELECT 1
+          FROM generate_series($2::date, $3::date - interval '1 day', '1 day') as d(date)
+          LEFT JOIN room_inventory ri ON ri.room_type_id = rt.id AND ri.date = d.date
+          WHERE COALESCE(ri.available_count, 0) = 0
+        ) as available
+      `;
+    } else {
+      query += `, true as available`;
+    }
+
+    query += `
       FROM room_types rt
       LEFT JOIN room_type_images rti ON rt.id = rti.room_type_id
       WHERE rt.hotel_id = $1
       GROUP BY rt.id
     `;
-    const { rows } = await pool.query(query, [hotelId]);
+    
+    const params = [hotelId];
+    if (checkIn && checkOut) {
+      params.push(checkIn as any, checkOut as any);
+    }
+
+    const { rows } = await pool.query(query, params);
     return rows;
+  }
+
+  async getRoomTypeById(id: number) {
+    const query = 'SELECT * FROM room_types WHERE id = $1';
+    const { rows } = await pool.query(query, [id]);
+    return rows[0] || null;
   }
 
   async updateImages(hotelId: number, imageUrls: string[]) {

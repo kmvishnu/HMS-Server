@@ -3,11 +3,11 @@ import { AppError } from '../utils/AppError';
 import { BookingStatus } from '../types';
 
 export class BookingRepository {
-  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[] = []) {
-    return this.createBookingWithGuests(userId, roomTypeId, checkIn, checkOut, guests);
+  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[] = [], totalAmount: number) {
+    return this.createBookingWithGuests(userId, roomTypeId, checkIn, checkOut, guests, totalAmount);
   }
 
-  async createBookingWithGuests(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[]) {
+  async createBookingWithGuests(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[], totalAmount: number) {
     const client = await pool.connect();
     
     try {
@@ -56,8 +56,8 @@ export class BookingRepository {
 
       // 5. Insert booking
       const insertQuery = `
-        INSERT INTO bookings (user_id, room_type_id, check_in, check_out, status)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO bookings (user_id, room_type_id, check_in, check_out, total_amount, status)
+        VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `;
       const bookingResult = await client.query(insertQuery, [
@@ -65,6 +65,7 @@ export class BookingRepository {
         roomTypeId, 
         checkIn, 
         checkOut, 
+        totalAmount,
         BookingStatus.CONFIRMED
       ]);
 

@@ -5,9 +5,10 @@ import { catchAsync } from '../utils/catchAsync';
 const authService = new AuthService();
 
 export const register = catchAsync(async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  const { firstName, lastName, email, password } = req.body;
+  const fullName = `${firstName} ${lastName}`.trim();
   
-  const user = await authService.register(name, email, password);
+  const user = await authService.register(fullName, email, password);
 
   res.status(201).json({
     success: true,
@@ -27,8 +28,9 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const setupAdmin = catchAsync(async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
-  const user = await authService.setupFirstAdmin(name, email, password);
+  const { firstName, lastName, email, password } = req.body;
+  const fullName = `${firstName} ${lastName}`.trim();
+  const user = await authService.setupFirstAdmin(fullName, email, password);
 
   res.status(201).json({
     success: true,

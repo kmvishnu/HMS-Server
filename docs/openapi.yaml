@@ -1,0 +1,561 @@
+openapi: 3.0.0
+info:
+  title: Hotel Management System (HMS) API
+  description: Comprehensive API for multi-hotel management, bookings, and customer search.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+  - url: https://hms-server-mu.vercel.app
+    description: Production server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+paths:
+  # --- Authentication ---
+  /auth/register:
+    post:
+      summary: Register a new customer
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName: { type: string }
+                lastName: { type: string }
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '201':
+          description: User registered successfully
+        '400':
+          description: Bad request
+
+  /auth/login:
+    post:
+      summary: Login and receive tokens
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  data: { type: object }
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken: { type: string }
+      responses:
+        '200':
+          description: Tokens refreshed
+
+  # --- Public APIs ---
+  /public/home:
+    get:
+      summary: Get landing page data
+      tags: [Public]
+      security: []
+      responses:
+        '200':
+          description: Home data fetched
+
+  /public/search:
+    get:
+      summary: Smart search for hotels
+      tags: [Public]
+      security: []
+      parameters:
+        - name: location
+          in: query
+          schema: { type: string }
+        - name: checkIn
+          in: query
+          schema: { type: string, format: date }
+        - name: checkOut
+          in: query
+          schema: { type: string, format: date }
+        - name: guests
+          in: query
+          schema: { type: integer }
+        - name: minPrice
+          in: query
+          schema: { type: number }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+        - name: features
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: List of hotels
+
+  /public/locations:
+    get:
+      summary: Get location suggestions
+      tags: [Public]
+      security: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of locations
+
+  /public/hotels:
+    get:
+      summary: Search hotels
+      tags: [Public]
+      security: []
+      parameters:
+        - name: location
+          in: query
+          schema: { type: string }
+        - name: checkIn
+          in: query
+          schema: { type: string, format: date }
+        - name: checkOut
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: List of hotels
+
+  /public/hotels/{id}:
+    get:
+      summary: Get hotel details
+      tags: [Public]
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Hotel details
+
+  /availability:
+    get:
+      summary: Check global availability
+      tags: [Public]
+      security: []
+      parameters:
+        - name: checkIn
+          in: query
+          schema: { type: string, format: date }
+        - name: checkOut
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Availability results
+
+  # --- Shared/Dashboard ---
+  /dashboard:
+    get:
+      summary: Get user-specific dashboard (Admin/Customer)
+      tags: [Shared]
+      responses:
+        '200':
+          description: Dashboard data
+
+  # --- Customer APIs ---
+  /bookings:
+    post:
+      summary: Create a booking
+      tags: [Customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomTypeId: { type: integer }
+                checkIn: { type: string, format: date }
+                checkOut: { type: string, format: date }
+                guests:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      age: { type: integer }
+      responses:
+        '201':
+          description: Booking created
+
+  /bookings/preview:
+    post:
+      summary: Get booking price preview
+      tags: [Customer]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomTypeId: { type: integer }
+                checkIn: { type: string, format: date }
+                checkOut: { type: string, format: date }
+      responses:
+        '200':
+          description: Price preview data
+
+  /bookings/my-bookings:
+    get:
+      summary: Get current user's bookings
+      tags: [Customer]
+      responses:
+        '200':
+          description: List of bookings
+
+  /payments/create-order:
+    post:
+      summary: Create a payment order (Mock)
+      tags: [Customer]
+      responses:
+        '200':
+          description: Order created
+
+  /payments/verify:
+    post:
+      summary: Verify payment (Mock)
+      tags: [Customer]
+      responses:
+        '200':
+          description: Payment verified
+
+  # --- Owner/Staff (Scoped) ---
+  /hotel/{hotelId}/dashboard:
+    get:
+      summary: Get hotel dashboard
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Dashboard data
+
+  /hotel/{hotelId}/room-types:
+    get:
+      summary: List room types for a hotel
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: List of room types
+    post:
+      summary: Create room type
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                totalRooms: { type: integer }
+                price: { type: number }
+      responses:
+        '201':
+          description: Room type created
+
+  /hotel/{hotelId}/visibility:
+    put:
+      summary: Toggle hotel visibility
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isVisible: { type: boolean }
+      responses:
+        '200':
+          description: Visibility updated
+
+  /hotel/{hotelId}/features:
+    put:
+      summary: Update hotel features
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                features: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Features updated
+
+  /hotel/{hotelId}/inventory:
+    patch:
+      summary: Update inventory blocks
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomTypeId: { type: integer }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+                availableCount: { type: integer }
+      responses:
+        '200':
+          description: Inventory updated
+
+  /hotel/{hotelId}/room-types/{id}/images:
+    post:
+      summary: Upload room type image
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image: { type: string, format: binary }
+      responses:
+        '201':
+          description: Image uploaded
+
+  # --- Owner (Global) ---
+  /owner/hotels:
+    get:
+      summary: List all hotels owned by user
+      tags: [Owner]
+      responses:
+        '200':
+          description: List of hotels
+
+  /staff:
+    get:
+      summary: List all staff managed by owner
+      tags: [Owner]
+      responses:
+        '200':
+          description: List of staff members
+    post:
+      summary: Create a staff member
+      tags: [Owner]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                hotelId: { type: integer }
+      responses:
+        '201':
+          description: Staff created
+
+  /staff/{id}:
+    put:
+      summary: Update staff member
+      tags: [Owner]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                hotelId: { type: integer }
+      responses:
+        '200':
+          description: Staff updated
+    delete:
+      summary: Delete staff member
+      tags: [Owner]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Staff deleted
+
+  # --- Admin APIs ---
+  /admin/search:
+    get:
+      summary: Global search (Admin)
+      tags: [Admin]
+      responses:
+        '200':
+          description: Search results
+
+  /users:
+    get:
+      summary: List all users (Admin)
+      tags: [Admin]
+      responses:
+        '200':
+          description: List of users
+    post:
+      summary: Create user (Admin)
+      tags: [Admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string }
+                password: { type: string }
+                role: { type: string }
+                hotelId: { type: integer }
+      responses:
+        '201':
+          description: User created
+
+  /users/{id}:
+    put:
+      summary: Update user (Admin)
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: User updated
+    delete:
+      summary: Delete user (Admin)
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: User deleted
+
+  /hotels:
+    get:
+      summary: List all hotels (Admin)
+      tags: [Admin]
+      responses:
+        '200':
+          description: List of hotels
+    post:
+      summary: Create hotel (Admin)
+      tags: [Admin]
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                location: { type: string }
+                ownerId: { type: integer }
+                images: { type: array, items: { type: string, format: binary } }
+      responses:
+        '201':
+          description: Hotel created
+

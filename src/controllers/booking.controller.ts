@@ -22,6 +22,12 @@ export const createBooking = catchAsync(async (req: Request, res: Response) => {
   res.status(201).json({ success: true, data: booking });
 });
 
+export const getBookingPreview = catchAsync(async (req: Request, res: Response) => {
+  const { roomTypeId, checkIn, checkOut } = req.body;
+  const preview = await bookingService.getBookingPreview(roomTypeId, checkIn, checkOut);
+  res.status(200).json({ success: true, data: preview });
+});
+
 export const getHotelBookings = catchAsync(async (req: Request, res: Response) => {
   const { filter } = req.query;
   const hotelId = parseInt(req.params.hotelId as string, 10);

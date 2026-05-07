@@ -19,7 +19,11 @@ export class PublicService {
     };
   }
 
-  async searchHotels(location?: string, checkIn?: string, checkOut?: string) {
-    return await this.publicRepository.searchHotels(location, checkIn, checkOut);
+  async searchHotels(params: any) {
+    return await this.publicRepository.searchHotels(params);
+  }
+
+  async getLocations(q: string) {
+    return await this.publicRepository.getLocations(q);
   }
 }
