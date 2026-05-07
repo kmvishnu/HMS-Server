@@ -53,7 +53,6 @@ export const deleteRoomType = catchAsync(async (req: Request, res: Response) => 
 export const addRoomTypeImage = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
   const file = req.file;
-  debugger
 
   if (!file) {
     throw new AppError('Please upload an image', 400);

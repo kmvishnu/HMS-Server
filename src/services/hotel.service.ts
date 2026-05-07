@@ -1,11 +1,14 @@
 import { HotelRepository } from '../repositories/hotel.repository';
+import { InventoryRepository } from '../repositories/inventory.repository';
 import { AppError } from '../utils/AppError';
 
 export class HotelService {
   private hotelRepository: HotelRepository;
+  private inventoryRepository: InventoryRepository;
 
   constructor() {
     this.hotelRepository = new HotelRepository();
+    this.inventoryRepository = new InventoryRepository();
   }
 
   async getAllHotels() {
@@ -46,7 +49,23 @@ export class HotelService {
     if (!hotel) {
       throw new AppError('Hotel not found', 404);
     }
-    return await this.hotelRepository.createRoomType(hotelId, name, totalRooms, price);
+    
+    // 1. Create the room type
+    const roomType = await this.hotelRepository.createRoomType(hotelId, name, totalRooms, price);
+
+    // 2. Automatically initialize 90 days of inventory
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + 90);
+
+    await this.inventoryRepository.initInventory(
+      roomType.id, 
+      startDate.toISOString().split('T')[0], 
+      endDate.toISOString().split('T')[0], 
+      totalRooms
+    );
+
+    return roomType;
   }
 
   async updateVisibility(id: number, isVisible: boolean) {
