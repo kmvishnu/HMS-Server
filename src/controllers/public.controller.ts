@@ -3,6 +3,7 @@ import { PublicService } from '../services/public.service';
 import { HotelService } from '../services/hotel.service';
 import { InventoryService } from '../services/inventory.service';
 import { catchAsync } from '../utils/catchAsync';
+import { validateDateRange } from '../utils/dateValidation';
 
 const publicService = new PublicService();
 const hotelService = new HotelService();
@@ -16,6 +17,10 @@ export const getHomeData = catchAsync(async (req: Request, res: Response) => {
 export const searchHotels = catchAsync(async (req: Request, res: Response) => {
   const { location, checkIn, checkOut, guests, minPrice, maxPrice, features, page, limit } = req.query;
   
+  if (checkIn || checkOut) {
+    validateDateRange(checkIn as string, checkOut as string);
+  }
+
   const hotels = await publicService.searchHotels({
     location: location as string,
     checkIn: checkIn as string,
@@ -44,6 +49,10 @@ export const getHotelDetails = catchAsync(async (req: Request, res: Response) =>
   const hotelId = parseInt(req.params.id as string, 10);
   const { checkIn, checkOut } = req.query;
   
+  if (checkIn || checkOut) {
+    validateDateRange(checkIn as string, checkOut as string);
+  }
+  
   const hotel = await hotelService.getHotelDetails(
     hotelId, 
     checkIn as string | undefined, 
@@ -54,6 +63,7 @@ export const getHotelDetails = catchAsync(async (req: Request, res: Response) =>
 
 export const checkAvailability = catchAsync(async (req: Request, res: Response) => {
   const { hotelId, checkIn, checkOut } = req.query;
+  validateDateRange(checkIn as string, checkOut as string);
   const data = await inventoryService.getAvailability(
     parseInt(hotelId as string, 10),
     checkIn as string,

@@ -55,7 +55,7 @@ export class HotelRepository {
         ) as available
       `;
     } else {
-      query += `, true as available`;
+      query += `, null as available`;
     }
 
     query += `

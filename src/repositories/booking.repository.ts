@@ -22,6 +22,14 @@ export class BookingRepository {
         throw new AppError('Check-out must be after check-in', 400);
       }
 
+      // Extra Safety: check-in cannot be in the past
+      const checkInDate = new Date(checkIn);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (checkInDate < today) {
+        throw new AppError('Check-in date cannot be in the past', 400);
+      }
+
       // 2. Lock the rows for the specific date range
       const lockQuery = `
         SELECT date, available_count 

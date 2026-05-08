@@ -1,11 +1,14 @@
 import { Request, Response } from 'express';
 import { BookingService } from '../services/booking.service';
 import { catchAsync } from '../utils/catchAsync';
+import { validateDateRange } from '../utils/dateValidation';
 
 const bookingService = new BookingService();
 
 export const createBooking = catchAsync(async (req: Request, res: Response) => {
   const { roomTypeId, checkIn, checkOut, guests } = req.body;
+  
+  validateDateRange(checkIn, checkOut);
   
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
@@ -24,6 +27,7 @@ export const createBooking = catchAsync(async (req: Request, res: Response) => {
 
 export const getBookingPreview = catchAsync(async (req: Request, res: Response) => {
   const { roomTypeId, checkIn, checkOut } = req.body;
+  validateDateRange(checkIn, checkOut);
   const preview = await bookingService.getBookingPreview(roomTypeId, checkIn, checkOut);
   res.status(200).json({ success: true, data: preview });
 });
