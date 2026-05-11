@@ -109,9 +109,11 @@ paths:
           schema: { type: string }
         - name: checkIn
           in: query
+          description: Check-in date. Must be today or later.
           schema: { type: string, format: date }
         - name: checkOut
           in: query
+          description: Check-out date. Must be after check-in.
           schema: { type: string, format: date }
         - name: guests
           in: query
@@ -127,9 +129,11 @@ paths:
           schema: { type: string }
         - name: page
           in: query
+          description: Page number for pagination
           schema: { type: integer, default: 1 }
         - name: limit
           in: query
+          description: Number of items per page
           schema: { type: integer, default: 10 }
       responses:
         '200':
@@ -178,6 +182,14 @@ paths:
           in: path
           required: true
           schema: { type: integer }
+        - name: checkIn
+          in: query
+          description: Optional. If provided, calculates availability for this date. Must be today or later.
+          schema: { type: string, format: date }
+        - name: checkOut
+          in: query
+          description: Optional. If provided, calculates availability for this date. Must be after check-in.
+          schema: { type: string, format: date }
       responses:
         '200':
           description: Hotel details
@@ -477,23 +489,50 @@ paths:
           description: Staff deleted
 
   # --- Admin APIs ---
+  /admin/dashboard:
+    get:
+      summary: Admin dashboard stats
+      tags: [Admin]
+      responses:
+        '200':
+          description: Platform statistics
+
   /admin/search:
     get:
-      summary: Global search (Admin)
+      summary: Global search across users, hotels, and bookings
       tags: [Admin]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string }
       responses:
         '200':
-          description: Search results
+          description: Grouped search results
 
-  /users:
+  /admin/users:
     get:
-      summary: List all users (Admin)
+      summary: Paginated list of users
       tags: [Admin]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: role
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
       responses:
         '200':
-          description: List of users
+          description: List of users with pagination
+
     post:
-      summary: Create user (Admin)
+      summary: Create any user type
       tags: [Admin]
       requestBody:
         required: true
@@ -511,9 +550,20 @@ paths:
         '201':
           description: User created
 
-  /users/{id}:
+  /admin/users/{id}:
+    get:
+      summary: Unified user details (Role-aware inspection)
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Detailed user profile. Format depends on user role (OWNER, CUSTOMER, STAFF, ADMIN).
     put:
-      summary: Update user (Admin)
+      summary: Update user details
       tags: [Admin]
       parameters:
         - name: id
@@ -524,7 +574,7 @@ paths:
         '200':
           description: User updated
     delete:
-      summary: Delete user (Admin)
+      summary: Soft delete user
       tags: [Admin]
       parameters:
         - name: id
@@ -532,30 +582,83 @@ paths:
           required: true
           schema: { type: integer }
       responses:
-        '200':
-          description: User deleted
+        '204':
+          description: User soft-deleted
 
-  /hotels:
+  /admin/hotels:
     get:
-      summary: List all hotels (Admin)
+      summary: Paginated list of hotels
       tags: [Admin]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
       responses:
         '200':
           description: List of hotels
-    post:
-      summary: Create hotel (Admin)
+
+  /admin/hotels/{id}:
+    get:
+      summary: Full hotel details with paginated bookings
       tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: bPage
+          in: query
+          description: Page for nested bookings
+          schema: { type: integer, default: 1 }
+        - name: bLimit
+          in: query
+          description: Limit for nested bookings
+          schema: { type: integer, default: 5 }
+      responses:
+        '200':
+          description: Comprehensive hotel view
+
+  /admin/hotels/{id}/visibility:
+    put:
+      summary: Toggle hotel visibility
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
       requestBody:
         content:
-          multipart/form-data:
+          application/json:
             schema:
               type: object
               properties:
-                name: { type: string }
-                location: { type: string }
-                ownerId: { type: integer }
-                images: { type: array, items: { type: string, format: binary } }
+                isVisible: { type: boolean }
       responses:
-        '201':
-          description: Hotel created
+        '200':
+          description: Visibility updated
+
+  /admin/bookings:
+    get:
+      summary: Global bookings list
+      tags: [Admin]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 10 }
+        - name: hotelId
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of bookings across platform
 
