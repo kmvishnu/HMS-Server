@@ -16,7 +16,7 @@ router.get('/:id', validate(getHotelParamsSchema), getHotelDetails);
 router.use(protect);
 router.post(
   '/', 
-  restrictTo(Role.ADMIN, Role.HOTEL_OWNER), 
+  restrictTo(Role.ADMIN), 
   uploadHotelImages.array('images', 5),
   validate(createHotelSchema), 
   createHotel

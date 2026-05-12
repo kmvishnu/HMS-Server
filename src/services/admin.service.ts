@@ -80,12 +80,20 @@ export class AdminService {
 
   async updateHotel(id: number, hotelData: any) {
     const hotel = await this.hotelRepo.findById(id);
-    if (!hotel) throw new AppError('Hotel not found', 404);
+    if (!hotel) {
+      throw new AppError('Hotel not found', 404);
+    }
     return await this.hotelRepo.updateHotel(id, hotelData.name, hotelData.location, hotelData.ownerId);
   }
 
   async updateHotelVisibility(id: number, isVisible: boolean) {
     return await this.hotelRepo.updateVisibility(id, isVisible);
+  }
+
+  async deleteHotel(id: number) {
+    const hotel = await this.hotelRepo.findById(id);
+    if (!hotel) throw new AppError('Hotel not found', 404);
+    return await this.adminRepo.softDeleteHotel(id);
   }
 
   async getBookings(filters: any, page: number, limit: number) {

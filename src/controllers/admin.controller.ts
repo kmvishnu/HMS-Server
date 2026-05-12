@@ -73,6 +73,12 @@ export const updateHotelVisibility = catchAsync(async (req: Request, res: Respon
   res.status(200).json({ success: true, data: hotel });
 });
 
+export const deleteHotel = catchAsync(async (req: Request, res: Response) => {
+  const id = parseInt(req.params.id as string, 10);
+  await adminService.deleteHotel(id);
+  res.status(204).send();
+});
+
 export const getBookings = catchAsync(async (req: Request, res: Response) => {
   const page = parseInt((req.query.page as string) || '1', 10);
   const limit = parseInt((req.query.limit as string) || '10', 10);

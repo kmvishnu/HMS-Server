@@ -117,7 +117,7 @@ export class AdminRepository {
 
     const dataQuery = `
       SELECT b.id, b.check_in, b.check_out, b.status, b.total_amount, b.created_at,
-             u.name as user_name, u.email as user_email,
+             u.name as user_name, u.email as user_email, u.id as user_id,
              rt.name as room_type_name,
              h.name as hotel_name
       FROM bookings b

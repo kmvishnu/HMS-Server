@@ -23,6 +23,7 @@ router.delete('/users/:id', adminController.deleteUser);
 router.get('/hotels', adminController.getHotels);
 router.get('/hotels/:id', adminController.getHotelDetails);
 router.put('/hotels/:id/visibility', adminController.updateHotelVisibility);
+router.delete('/hotels/:id', adminController.deleteHotel);
 
 // Global Bookings
 router.get('/bookings', adminController.getBookings);

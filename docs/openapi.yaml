@@ -301,6 +301,69 @@ paths:
         '200':
           description: Dashboard data
 
+  /hotels:
+    get:
+      summary: List all hotels (Internal)
+      tags: [Hotels]
+      responses:
+        '200':
+          description: List of hotels
+    post:
+      summary: Create a new hotel (Admin Only)
+      tags: [Hotels]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                location: { type: string }
+                ownerId: { type: integer, description: "Optional. Defaults to current user if they are an owner." }
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Hotel created successfully
+
+  /hotels/{id}:
+    get:
+      summary: Get hotel details (Internal)
+      tags: [Hotels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Hotel details
+    put:
+      summary: Update hotel details (Admin Only)
+      tags: [Hotels]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                location: { type: string }
+                ownerId: { type: integer }
+      responses:
+        '200':
+          description: Hotel updated
+
   /hotel/{hotelId}/room-types:
     get:
       summary: List room types for a hotel
@@ -315,6 +378,7 @@ paths:
           description: List of room types
     post:
       summary: Create room type
+      description: "Creates a new room type for the hotel. **Automation**: Upon creation, the system automatically generates 90 days of inventory records with all rooms set as available."
       tags: [Management]
       parameters:
         - name: hotelId
@@ -332,7 +396,7 @@ paths:
                 price: { type: number }
       responses:
         '201':
-          description: Room type created
+          description: Room type created and 90-day inventory initialized
 
   /hotel/{hotelId}/visibility:
     put:
@@ -640,6 +704,19 @@ paths:
       responses:
         '200':
           description: Visibility updated
+
+  /admin/hotels/{id}:
+    delete:
+      summary: Soft delete hotel
+      tags: [Admin]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Hotel soft-deleted
 
   /admin/bookings:
     get:
