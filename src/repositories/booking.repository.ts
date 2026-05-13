@@ -3,11 +3,7 @@ import { AppError } from '../utils/AppError';
 import { BookingStatus } from '../types';
 
 export class BookingRepository {
-  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[] = [], totalAmount: number) {
-    return this.createBookingWithGuests(userId, roomTypeId, checkIn, checkOut, guests, totalAmount);
-  }
-
-  async createBookingWithGuests(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[], totalAmount: number) {
+  async createBookingWithGuests(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[], totalAmount: number, notes?: string) {
     const client = await pool.connect();
     
     try {
@@ -64,8 +60,8 @@ export class BookingRepository {
 
       // 5. Insert booking
       const insertQuery = `
-        INSERT INTO bookings (user_id, room_type_id, check_in, check_out, total_amount, status)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO bookings (user_id, room_type_id, check_in, check_out, total_amount, status, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `;
       const bookingResult = await client.query(insertQuery, [
@@ -74,7 +70,8 @@ export class BookingRepository {
         checkIn, 
         checkOut, 
         totalAmount,
-        BookingStatus.CONFIRMED
+        BookingStatus.CONFIRMED,
+        notes || null
       ]);
 
       const booking = bookingResult.rows[0];
@@ -111,7 +108,7 @@ export class BookingRepository {
     return rows;
   }
 
-  async getHotelBookings(hotelId: number, filter?: string) {
+  async getHotelBookings(hotelId: number, filters: { filter?: string, startDate?: string, endDate?: string, status?: string }) {
     let query = `
       SELECT b.*, rt.name as room_type_name, u.name as user_name, u.email as user_email
       FROM bookings b
@@ -120,13 +117,29 @@ export class BookingRepository {
       WHERE rt.hotel_id = $1
     `;
     const params: any[] = [hotelId];
+    let pIdx = 2;
 
-    if (filter === 'today') {
-      query += ' AND (b.check_in = CURRENT_DATE OR b.check_out = CURRENT_DATE)';
-    } else if (filter === 'upcoming') {
-      query += ' AND b.check_in > CURRENT_DATE';
-    } else if (filter === 'checked-in') {
-      query += " AND b.status = 'CHECKED_IN'";
+    if (filters.filter === 'today') {
+      query += ` AND (b.check_in = CURRENT_DATE OR b.check_out = CURRENT_DATE)`;
+    } else if (filters.filter === 'upcoming') {
+      query += ` AND b.check_in > CURRENT_DATE`;
+    } else if (filters.filter === 'checked-in') {
+      query += ` AND b.status = 'CHECKED_IN'`;
+    } else if (filters.filter === 'completed') {
+      query += ` AND b.status = 'CHECKED_OUT'`;
+    }
+
+    if (filters.startDate) {
+      query += ` AND b.check_in >= $${pIdx++}`;
+      params.push(filters.startDate);
+    }
+    if (filters.endDate) {
+      query += ` AND b.check_out <= $${pIdx++}`;
+      params.push(filters.endDate);
+    }
+    if (filters.status) {
+      query += ` AND b.status = $${pIdx++}`;
+      params.push(filters.status);
     }
 
     query += ' ORDER BY b.check_in ASC';
@@ -148,6 +161,12 @@ export class BookingRepository {
   async updateBookingStatus(id: number, status: string) {
     const query = 'UPDATE bookings SET status = $2 WHERE id = $1 RETURNING *';
     const { rows } = await pool.query(query, [id, status]);
+    return rows[0];
+  }
+
+  async updateBookingNotes(id: number, notes: string) {
+    const query = 'UPDATE bookings SET notes = $2 WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id, notes]);
     return rows[0];
   }
 

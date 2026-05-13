@@ -234,6 +234,7 @@ paths:
                 roomTypeId: { type: integer }
                 checkIn: { type: string, format: date }
                 checkOut: { type: string, format: date }
+                notes: { type: string, maxLength: 500 }
                 guests:
                   type: array
                   items:
@@ -287,10 +288,11 @@ paths:
         '200':
           description: Payment verified
 
-  # --- Owner/Staff (Scoped) ---
+  # --- Owner/Staff Scoped ---
   /hotel/{hotelId}/dashboard:
     get:
-      summary: Get hotel dashboard
+      summary: Get advanced hotel dashboard
+      description: Returns occupancy rates, today's check-ins/outs, upcoming bookings (5 days), and inventory alerts.
       tags: [Management]
       parameters:
         - name: hotelId
@@ -299,53 +301,63 @@ paths:
           schema: { type: integer }
       responses:
         '200':
-          description: Dashboard data
+          description: Enhanced dashboard data
 
-  /hotels:
+  /hotel/{hotelId}/profile-completion:
     get:
-      summary: List all hotels (Internal)
-      tags: [Hotels]
-      responses:
-        '200':
-          description: List of hotels
-    post:
-      summary: Create a new hotel (Admin Only)
-      tags: [Hotels]
-      security:
-        - bearerAuth: []
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                location: { type: string }
-                ownerId: { type: integer, description: "Optional. Defaults to current user if they are an owner." }
-                images:
-                  type: array
-                  items:
-                    type: string
-                    format: binary
-      responses:
-        '201':
-          description: Hotel created successfully
-
-  /hotels/{id}:
-    get:
-      summary: Get hotel details (Internal)
-      tags: [Hotels]
+      summary: Get hotel profile completeness
+      tags: [Management]
       parameters:
-        - name: id
+        - name: hotelId
           in: path
           required: true
           schema: { type: integer }
       responses:
         '200':
-          description: Hotel details
-    put:
-      summary: Update hotel details (Admin Only)
-      tags: [Hotels]
+          description: Completion percentage and missing fields
+
+  /hotel/{hotelId}/analytics:
+    get:
+      summary: Get hotel analytics (7 days)
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Weekly occupancy and booking trends
+
+  /hotel/{hotelId}/bookings:
+    get:
+      summary: List hotel bookings with advanced filters
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: filter
+          in: query
+          schema: { type: string, enum: [today, upcoming, checked-in, completed] }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: List of bookings
+
+  /hotel/bookings/{id}/notes:
+    patch:
+      summary: Update booking notes
+      tags: [Management]
       parameters:
         - name: id
           in: path
@@ -357,12 +369,55 @@ paths:
             schema:
               type: object
               properties:
-                name: { type: string }
-                location: { type: string }
-                ownerId: { type: integer }
+                notes: { type: string, maxLength: 500 }
       responses:
         '200':
-          description: Hotel updated
+          description: Notes updated
+
+  /hotel/{hotelId}/inventory/calendar:
+    get:
+      summary: Get inventory calendar grid
+      description: Returns availability for all room types over a specified range (max 30 days).
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: startDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Inventory grid
+
+  /hotel/{hotelId}/inventory:
+    patch:
+      summary: Bulk update inventory blocks
+      tags: [Management]
+      parameters:
+        - name: hotelId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roomTypeId: { type: integer }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+                availableCount: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Inventory updated
 
   /hotel/{hotelId}/room-types:
     get:
@@ -375,10 +430,10 @@ paths:
           schema: { type: integer }
       responses:
         '200':
-          description: List of room types
+          description: List of room types (including images and availability)
     post:
       summary: Create room type
-      description: "Creates a new room type for the hotel. **Automation**: Upon creation, the system automatically generates 90 days of inventory records with all rooms set as available."
+      description: "Creates a new room type for the hotel. **Automation**: Upon creation, the system automatically generates 90 days of inventory records."
       tags: [Management]
       parameters:
         - name: hotelId
@@ -396,161 +451,7 @@ paths:
                 price: { type: number }
       responses:
         '201':
-          description: Room type created and 90-day inventory initialized
-
-  /hotel/{hotelId}/visibility:
-    put:
-      summary: Toggle hotel visibility
-      tags: [Management]
-      parameters:
-        - name: hotelId
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                isVisible: { type: boolean }
-      responses:
-        '200':
-          description: Visibility updated
-
-  /hotel/{hotelId}/features:
-    put:
-      summary: Update hotel features
-      tags: [Management]
-      parameters:
-        - name: hotelId
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                features: { type: array, items: { type: string } }
-      responses:
-        '200':
-          description: Features updated
-
-  /hotel/{hotelId}/inventory:
-    patch:
-      summary: Update inventory blocks
-      tags: [Management]
-      parameters:
-        - name: hotelId
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                roomTypeId: { type: integer }
-                startDate: { type: string, format: date }
-                endDate: { type: string, format: date }
-                availableCount: { type: integer }
-      responses:
-        '200':
-          description: Inventory updated
-
-  /hotel/{hotelId}/room-types/{id}/images:
-    post:
-      summary: Upload room type image
-      tags: [Management]
-      parameters:
-        - name: hotelId
-          in: path
-          required: true
-          schema: { type: integer }
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              properties:
-                image: { type: string, format: binary }
-      responses:
-        '201':
-          description: Image uploaded
-
-  # --- Owner (Global) ---
-  /owner/hotels:
-    get:
-      summary: List all hotels owned by user
-      tags: [Owner]
-      responses:
-        '200':
-          description: List of hotels
-
-  /staff:
-    get:
-      summary: List all staff managed by owner
-      tags: [Owner]
-      responses:
-        '200':
-          description: List of staff members
-    post:
-      summary: Create a staff member
-      tags: [Owner]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                password: { type: string }
-                hotelId: { type: integer }
-      responses:
-        '201':
-          description: Staff created
-
-  /staff/{id}:
-    put:
-      summary: Update staff member
-      tags: [Owner]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                hotelId: { type: integer }
-      responses:
-        '200':
-          description: Staff updated
-    delete:
-      summary: Delete staff member
-      tags: [Owner]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        '204':
-          description: Staff deleted
+          description: Room type created
 
   # --- Admin APIs ---
   /admin/dashboard:
@@ -585,69 +486,9 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, default: 10 }
-        - name: role
-          in: query
-          schema: { type: string }
-        - name: search
-          in: query
-          schema: { type: string }
       responses:
         '200':
-          description: List of users with pagination
-
-    post:
-      summary: Create any user type
-      tags: [Admin]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string }
-                password: { type: string }
-                role: { type: string }
-                hotelId: { type: integer }
-      responses:
-        '201':
-          description: User created
-
-  /admin/users/{id}:
-    get:
-      summary: Unified user details (Role-aware inspection)
-      tags: [Admin]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        '200':
-          description: Detailed user profile. Format depends on user role (OWNER, CUSTOMER, STAFF, ADMIN).
-    put:
-      summary: Update user details
-      tags: [Admin]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        '200':
-          description: User updated
-    delete:
-      summary: Soft delete user
-      tags: [Admin]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        '204':
-          description: User soft-deleted
+          description: List of users
 
   /admin/hotels:
     get:
@@ -673,39 +514,9 @@ paths:
           in: path
           required: true
           schema: { type: integer }
-        - name: bPage
-          in: query
-          description: Page for nested bookings
-          schema: { type: integer, default: 1 }
-        - name: bLimit
-          in: query
-          description: Limit for nested bookings
-          schema: { type: integer, default: 5 }
       responses:
         '200':
           description: Comprehensive hotel view
-
-  /admin/hotels/{id}/visibility:
-    put:
-      summary: Toggle hotel visibility
-      tags: [Admin]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                isVisible: { type: boolean }
-      responses:
-        '200':
-          description: Visibility updated
-
-  /admin/hotels/{id}:
     delete:
       summary: Soft delete hotel
       tags: [Admin]
@@ -717,25 +528,3 @@ paths:
       responses:
         '204':
           description: Hotel soft-deleted
-
-  /admin/bookings:
-    get:
-      summary: Global bookings list
-      tags: [Admin]
-      parameters:
-        - name: page
-          in: query
-          schema: { type: integer, default: 1 }
-        - name: limit
-          in: query
-          schema: { type: integer, default: 10 }
-        - name: hotelId
-          in: query
-          schema: { type: integer }
-        - name: status
-          in: query
-          schema: { type: string }
-      responses:
-        '200':
-          description: List of bookings across platform
-

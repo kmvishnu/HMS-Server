@@ -13,6 +13,8 @@ export const updateHotelSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters').optional(),
     location: z.string().min(2, 'Location must be at least 2 characters').optional(),
     ownerId: z.number().int().optional().nullable(),
+    contactEmail: z.string().email('Invalid email format').optional(),
+    address: z.string().max(500, 'Address must be less than 500 characters').optional(),
   }),
 });
 

@@ -120,7 +120,7 @@ export class UserRepository {
     return rows;
   }
 
-  async updateStaff(id: number, updates: { name?: string, email?: string, passwordHash?: string }) {
+  async updateStaff(id: number, updates: { name?: string, email?: string, passwordHash?: string, hotelId?: number }) {
     const fields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -140,6 +140,12 @@ export class UserRepository {
     if (updates.passwordHash !== undefined) {
       fields.push(`password_hash = $${paramIndex}`);
       values.push(updates.passwordHash);
+      paramIndex++;
+    }
+
+    if (updates.hotelId !== undefined) {
+      fields.push(`hotel_id = $${paramIndex}`);
+      values.push(updates.hotelId);
       paramIndex++;
     }
 

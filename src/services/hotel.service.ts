@@ -36,12 +36,12 @@ export class HotelService {
     return await this.hotelRepository.createHotel(name, location, ownerId, imageUrls);
   }
 
-  async updateHotel(id: number, name?: string, location?: string, ownerId?: number | null) {
+  async updateHotel(id: number, name?: string, location?: string, ownerId?: number | null, reqBody: any = {}) {
     const hotel = await this.hotelRepository.findById(id);
     if (!hotel) {
       throw new AppError('Hotel not found', 404);
     }
-    return await this.hotelRepository.updateHotel(id, name, location, ownerId);
+    return await this.hotelRepository.updateHotel(id, name, location, ownerId, reqBody);
   }
 
   async createRoomType(hotelId: number, name: string, totalRooms: number, price: number) {
@@ -80,6 +80,40 @@ export class HotelService {
     return await this.hotelRepository.updateFeatures(id, features);
   }
 
+  async getProfileCompleteness(hotelId: number) {
+    const hotel = await this.hotelRepository.findById(hotelId);
+    if (!hotel) throw new AppError('Hotel not found', 404);
+
+    const roomTypes = await this.hotelRepository.getRoomTypesByHotelId(hotelId);
+    
+    const missingFields: string[] = [];
+    let score = 0;
+    const totalPoints = 3;
+
+    if (hotel.image_urls && hotel.image_urls.length > 0) {
+      score++;
+    } else {
+      missingFields.push('images');
+    }
+
+    if (hotel.features && hotel.features.length > 0) {
+      score++;
+    } else {
+      missingFields.push('features');
+    }
+
+    if (roomTypes.length > 0) {
+      score++;
+    } else {
+      missingFields.push('roomTypes');
+    }
+
+    return {
+      completionPercentage: Math.round((score / totalPoints) * 100),
+      missingFields
+    };
+  }
+
   async updateRoomType(id: number, name?: string, totalRooms?: number, price?: number) {
     return await this.hotelRepository.updateRoomType(id, name, totalRooms, price);
   }
@@ -88,12 +122,12 @@ export class HotelService {
     return await this.hotelRepository.deleteRoomType(id);
   }
 
-  async addRoomTypeImage(roomTypeId: number, imageUrl: string) {
+  async addRoomTypeImage(roomTypeId: number, base64Image: string) {
     const images = await this.hotelRepository.getRoomTypeImages(roomTypeId);
     if (images.length >= 3) {
       throw new AppError('Maximum 3 images allowed per room type', 400);
     }
-    return await this.hotelRepository.addRoomTypeImage(roomTypeId, imageUrl);
+    return await this.hotelRepository.addRoomTypeImage(roomTypeId, base64Image);
   }
 
   async deleteRoomTypeImage(id: number) {
@@ -151,5 +185,31 @@ export class HotelService {
 
     currentImages.splice(index, 1);
     return await this.hotelRepository.updateImages(hotelId, currentImages);
+  }
+
+  async getHotelSettings(hotelId: number) {
+    const hotel = await this.hotelRepository.getHotelSettings(hotelId);
+    if (!hotel) throw new AppError('Hotel not found', 404);
+
+    // Map to camelCase
+    return {
+      hotel: {
+        id: hotel.id,
+        name: hotel.name,
+        location: hotel.location,
+        contactEmail: hotel.contact_email,
+        address: hotel.address,
+        isVisible: hotel.is_visible,
+        features: hotel.features || [],
+        images: hotel.image_urls || []
+      },
+      roomTypes: (hotel.room_types || []).map((rt: any) => ({
+        id: rt.id,
+        name: rt.name,
+        price: rt.price,
+        totalRooms: rt.total_rooms,
+        images: rt.images || []
+      }))
+    };
   }
 }

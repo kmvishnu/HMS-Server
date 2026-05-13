@@ -25,11 +25,13 @@ export const getGlobalDashboard = catchAsync(async (req: Request, res: Response)
 });
 
 export const getDashboard = catchAsync(async (req: Request, res: Response) => {
-  const hotelId = parseInt(req.params.hotelId as string, 10);
-  if (isNaN(hotelId)) {
+  const { hotelId } = req.params;
+  const id = parseInt(hotelId as string, 10);
+  
+  if (isNaN(id)) {
     throw new AppError('Invalid hotel ID', 400);
   }
 
-  const data = await dashboardService.getHotelDashboard(hotelId);
+  const data = await dashboardService.getHotelDashboard(id);
   res.status(200).json({ success: true, data });
 });

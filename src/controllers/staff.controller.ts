@@ -1,18 +1,20 @@
 import { Request, Response } from 'express';
 import { StaffService } from '../services/staff.service';
 import { catchAsync } from '../utils/catchAsync';
+import { AppError } from '../utils/AppError';
 
 const staffService = new StaffService();
 
 export const createStaff = catchAsync(async (req: Request, res: Response) => {
   const { name, email, password, hotelId } = req.body;
-  const ownerId = (req as any).user.userId;
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const { userId, role } = req.user;
 
   if (!hotelId) {
-    return res.status(400).json({ success: false, message: 'hotelId is required' });
+    throw new AppError('hotelId is required', 400);
   }
 
-  const staff = await staffService.createStaff(name, email, password, hotelId, ownerId);
+  const staff = await staffService.createStaff(name, email, password, hotelId, userId, role);
 
   res.status(201).json({
     success: true,
@@ -21,7 +23,8 @@ export const createStaff = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const getStaffList = catchAsync(async (req: Request, res: Response) => {
-  const ownerId = (req as any).user.userId;
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const ownerId = req.user.userId;
 
   const staff = await staffService.getStaffByOwnerId(ownerId);
 
@@ -33,10 +36,11 @@ export const getStaffList = catchAsync(async (req: Request, res: Response) => {
 
 export const updateStaff = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const ownerId = (req as any).user.userId;
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const { userId, role } = req.user;
   const { name, email, password, hotelId } = req.body;
 
-  const staff = await staffService.updateStaff(parseInt(id as string), hotelId, ownerId, { 
+  const staff = await staffService.updateStaff(parseInt(id as string), hotelId, userId, role, { 
     name, 
     email, 
     passwordPlain: password 
@@ -50,9 +54,10 @@ export const updateStaff = catchAsync(async (req: Request, res: Response) => {
 
 export const deleteStaff = catchAsync(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const ownerId = (req as any).user.userId;
+  if (!req.user) throw new AppError('Unauthorized', 401);
+  const { userId, role } = req.user;
 
-  await staffService.deleteStaff(parseInt(id as string), ownerId);
+  await staffService.deleteStaff(parseInt(id as string), userId, role);
 
   res.status(204).json({
     success: true,

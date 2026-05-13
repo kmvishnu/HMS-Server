@@ -12,11 +12,7 @@ export class InventoryService {
   }
 
   async initInventory(roomTypeId: number, startDate: string, endDate: string) {
-    // 1. Get room type total rooms
-    const query = 'SELECT total_rooms FROM room_types WHERE id = $1';
-    const { rows } = await require('../config/db').default.query(query, [roomTypeId]);
-    const roomType = rows[0];
-
+    const roomType = await this.hotelRepository.getRoomTypeById(roomTypeId);
     if (!roomType) {
       throw new AppError('Room type not found', 404);
     }
@@ -36,7 +32,28 @@ export class InventoryService {
     return await this.inventoryRepository.getAvailability(hotelId, checkIn, checkOut);
   }
 
+  async getInventoryCalendar(hotelId: number, startDate: string, endDate: string) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 30) {
+      throw new AppError('Calendar range cannot exceed 30 days', 400);
+    }
+
+    return await this.inventoryRepository.getInventoryCalendar(hotelId, startDate, endDate);
+  }
+
   async updateInventory(roomTypeId: number, startDate: string, endDate: string, availableCount: number) {
+    if (availableCount < 0) {
+      throw new AppError('Available count cannot be negative', 400);
+    }
+
+    // Wrap in a simple check to ensure room type exists
+    const roomType = await this.hotelRepository.getRoomTypeById(roomTypeId);
+    if (!roomType) throw new AppError('Room type not found', 404);
+
     return await this.inventoryRepository.updateInventory(roomTypeId, startDate, endDate, availableCount);
   }
 }

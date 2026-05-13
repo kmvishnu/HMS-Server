@@ -2,75 +2,45 @@ import pool from '../config/db';
 
 export class HotelRepository {
   async findAll() {
-    const query = 'SELECT * FROM hotels';
+    const query = 'SELECT * FROM hotels WHERE deleted_at IS NULL ORDER BY created_at DESC';
     const { rows } = await pool.query(query);
     return rows;
   }
 
   async findById(id: number) {
-    const query = 'SELECT * FROM hotels WHERE id = $1';
+    const query = 'SELECT * FROM hotels WHERE id = $1 AND deleted_at IS NULL';
     const { rows } = await pool.query(query, [id]);
     return rows[0] || null;
   }
 
   async getHotelsByOwner(ownerId: number) {
-    const query = 'SELECT * FROM hotels WHERE owner_id = $1';
+    const query = 'SELECT * FROM hotels WHERE owner_id = $1 AND deleted_at IS NULL';
     const { rows } = await pool.query(query, [ownerId]);
     return rows;
   }
 
-  async createHotel(name: string, location: string, ownerId: number, imageUrls: string[]) {
-    const query = `
-      INSERT INTO hotels (name, location, owner_id, image_urls)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `;
-    const { rows } = await pool.query(query, [name, location, ownerId, imageUrls]);
-    return rows[0];
-  }
-
-  async createRoomType(hotelId: number, name: string, totalRooms: number, price: number) {
-    const query = `
-      INSERT INTO room_types (hotel_id, name, total_rooms, price)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `;
-    const { rows } = await pool.query(query, [hotelId, name, totalRooms, price]);
-    return rows[0];
-  }
-
   async getRoomTypesByHotelId(hotelId: number, checkIn?: string, checkOut?: string) {
-    let query = `
-      SELECT rt.*, 
-             COALESCE(json_agg(rti.image_url) FILTER (WHERE rti.image_url IS NOT NULL), '[]') as images
-    `;
+    let query = 'SELECT * FROM room_types WHERE hotel_id = $1';
+    const params: any[] = [hotelId];
 
     if (checkIn && checkOut) {
-      query += `,
-        NOT EXISTS (
-          SELECT 1
-          FROM generate_series($2::date, $3::date - interval '1 day', '1 day') as d(date)
-          LEFT JOIN room_inventory ri ON ri.room_type_id = rt.id AND ri.date = d.date
-          WHERE COALESCE(ri.available_count, 0) = 0
-        ) as available
+      query = `
+        SELECT rt.*, ri.available_count
+        FROM room_types rt
+        JOIN room_inventory ri ON rt.id = ri.room_type_id
+        WHERE rt.hotel_id = $1 
+        AND ri.date >= $2 AND ri.date < $3
       `;
-    } else {
-      query += `, null as available`;
-    }
-
-    query += `
-      FROM room_types rt
-      LEFT JOIN room_type_images rti ON rt.id = rti.room_type_id
-      WHERE rt.hotel_id = $1
-      GROUP BY rt.id
-    `;
-    
-    const params = [hotelId];
-    if (checkIn && checkOut) {
-      params.push(checkIn as any, checkOut as any);
+      params.push(checkIn, checkOut);
     }
 
     const { rows } = await pool.query(query, params);
+    
+    // For each room type, get its images
+    for (const rt of rows) {
+      rt.images = await this.getRoomTypeImages(rt.id);
+    }
+    
     return rows;
   }
 
@@ -80,18 +50,17 @@ export class HotelRepository {
     return rows[0] || null;
   }
 
-  async updateImages(hotelId: number, imageUrls: string[]) {
+  async createHotel(name: string, location: string, ownerId: number, imageUrls: string[]) {
     const query = `
-      UPDATE hotels 
-      SET image_urls = $2 
-      WHERE id = $1 
+      INSERT INTO hotels (name, location, owner_id, image_urls) 
+      VALUES ($1, $2, $3, $4) 
       RETURNING *
     `;
-    const { rows } = await pool.query(query, [hotelId, imageUrls]);
+    const { rows } = await pool.query(query, [name, location, ownerId, imageUrls]);
     return rows[0];
   }
 
-  async updateHotel(id: number, name?: string, location?: string, ownerId?: number | null) {
+  async updateHotel(id: number, name?: string, location?: string, ownerId?: number | null, reqBody: any = {}) {
     const fields: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -111,6 +80,18 @@ export class HotelRepository {
     if (ownerId !== undefined) {
       fields.push(`owner_id = $${paramIndex}`);
       values.push(ownerId);
+      paramIndex++;
+    }
+
+    if (reqBody.contactEmail !== undefined) {
+      fields.push(`contact_email = $${paramIndex}`);
+      values.push(reqBody.contactEmail ? reqBody.contactEmail.toLowerCase() : null);
+      paramIndex++;
+    }
+
+    if (reqBody.address !== undefined) {
+      fields.push(`address = $${paramIndex}`);
+      values.push(reqBody.address ? reqBody.address.trim() : null);
       paramIndex++;
     }
 
@@ -136,6 +117,22 @@ export class HotelRepository {
   async updateFeatures(id: number, features: string[]) {
     const query = 'UPDATE hotels SET features = $2 WHERE id = $1 RETURNING *';
     const { rows } = await pool.query(query, [id, features]);
+    return rows[0];
+  }
+
+  async updateImages(id: number, imageUrls: string[]) {
+    const query = 'UPDATE hotels SET image_urls = $2 WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id, imageUrls]);
+    return rows[0];
+  }
+
+  async createRoomType(hotelId: number, name: string, totalRooms: number, price: number) {
+    const query = `
+      INSERT INTO room_types (hotel_id, name, total_rooms, price) 
+      VALUES ($1, $2, $3, $4) 
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, [hotelId, name, totalRooms, price]);
     return rows[0];
   }
 
@@ -197,5 +194,40 @@ export class HotelRepository {
     const query = 'DELETE FROM room_types WHERE id = $1 RETURNING *';
     const { rows } = await pool.query(query, [id]);
     return rows[0];
+  }
+
+  async deleteHotel(id: number) {
+    const query = 'UPDATE hotels SET deleted_at = NOW() WHERE id = $1 RETURNING *';
+    const { rows } = await pool.query(query, [id]);
+    return rows[0];
+  }
+
+  async getHotelSettings(hotelId: number) {
+    const query = `
+      SELECT 
+        h.id, h.name, h.location, h.owner_id, h.image_urls, h.is_visible, h.features, h.contact_email, h.address,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', rt.id,
+              'name', rt.name,
+              'total_rooms', rt.total_rooms,
+              'price', rt.price,
+              'images', (
+                SELECT COALESCE(JSON_AGG(rti.image_url), '[]'::json)
+                FROM room_type_images rti
+                WHERE rti.room_type_id = rt.id
+              )
+            )
+          ) FILTER (WHERE rt.id IS NOT NULL),
+          '[]'::json
+        ) as room_types
+      FROM hotels h
+      LEFT JOIN room_types rt ON h.id = rt.hotel_id
+      WHERE h.id = $1 AND h.deleted_at IS NULL
+      GROUP BY h.id
+    `;
+    const { rows } = await pool.query(query, [hotelId]);
+    return rows[0] || null;
   }
 }

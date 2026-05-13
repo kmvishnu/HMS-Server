@@ -15,9 +15,6 @@ export class InventoryRepository {
   }
 
   async getAvailability(hotelId: number, checkIn: string, checkOut: string) {
-    // Find room types that have at least 1 available room for ALL dates in the range
-    // We check this by seeing if the minimum available_count in the date range > 0
-    // and if the count of dates we have inventory for matches the length of the stay.
     const query = `
       WITH DateRange AS (
         SELECT generate_series($2::date, ($3::date - interval '1 day')::date, '1 day'::interval)::date as d
@@ -35,6 +32,20 @@ export class InventoryRepository {
       AND COUNT(DISTINCT ri.date) = (SELECT days_needed FROM RequiredDays)
     `;
     const { rows } = await pool.query(query, [hotelId, checkIn, checkOut]);
+    return rows;
+  }
+
+  async getInventoryCalendar(hotelId: number, startDate: string, endDate: string) {
+    const query = `
+      SELECT ri.date, ri.room_type_id as "roomTypeId", ri.available_count as "availableCount", rt.name as "roomTypeName"
+      FROM room_inventory ri
+      JOIN room_types rt ON ri.room_type_id = rt.id
+      WHERE rt.hotel_id = $1
+        AND ri.date >= $2::date
+        AND ri.date <= $3::date
+      ORDER BY ri.date ASC, rt.id ASC
+    `;
+    const { rows } = await pool.query(query, [hotelId, startDate, endDate]);
     return rows;
   }
 

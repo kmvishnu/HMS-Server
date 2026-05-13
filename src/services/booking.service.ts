@@ -11,12 +11,14 @@ export class BookingService {
     this.hotelRepository = new HotelRepository();
   }
 
-  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[]) {
+  async createBooking(userId: number, roomTypeId: number, checkIn: string, checkOut: string, guests: { name: string, age: number }[], notes?: string) {
     const preview = await this.getBookingPreview(roomTypeId, checkIn, checkOut);
     
     if (!guests || guests.length === 0) {
       throw new AppError('Guest list is required', 400);
     }
+
+    const processedNotes = this.validateAndProcessNotes(notes);
     
     return await this.bookingRepository.createBookingWithGuests(
       userId, 
@@ -24,7 +26,8 @@ export class BookingService {
       checkIn, 
       checkOut, 
       guests,
-      preview.totalAmount
+      preview.totalAmount,
+      processedNotes
     );
   }
 
@@ -52,8 +55,18 @@ export class BookingService {
     };
   }
 
-  async getHotelBookings(hotelId: number, filter?: string) {
-    return await this.bookingRepository.getHotelBookings(hotelId, filter);
+  async getHotelBookings(hotelId: number, filters: any) {
+    return await this.bookingRepository.getHotelBookings(hotelId, filters);
+  }
+
+  async updateBookingNotes(bookingId: number, notes: string) {
+    const processedNotes = this.validateAndProcessNotes(notes);
+    if (!processedNotes) throw new AppError('Invalid notes provided', 400);
+
+    const booking = await this.bookingRepository.findById(bookingId);
+    if (!booking) throw new AppError('Booking not found', 404);
+
+    return await this.bookingRepository.updateBookingNotes(bookingId, processedNotes);
   }
 
   async checkin(bookingId: number) {
@@ -70,5 +83,13 @@ export class BookingService {
 
   async getUserBookings(userId: number) {
     return await this.bookingRepository.getUserBookings(userId);
+  }
+
+  private validateAndProcessNotes(notes?: string): string | undefined {
+    if (!notes) return undefined;
+    const trimmed = notes.trim();
+    if (trimmed.length === 0) return undefined;
+    if (trimmed.length > 500) throw new AppError('Notes cannot exceed 500 characters', 400);
+    return trimmed;
   }
 }

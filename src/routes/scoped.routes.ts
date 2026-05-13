@@ -1,53 +1,60 @@
 import { Router } from 'express';
+import * as hotelController from '../controllers/hotel.controller';
+import * as bookingController from '../controllers/booking.controller';
+import * as inventoryController from '../controllers/inventory.controller';
+import * as dashboardController from '../controllers/dashboard.controller';
+import * as analyticsController from '../controllers/analytics.controller';
 import { protect } from '../middleware/auth.middleware';
-import { restrictToHotel } from '../middleware/hotel-access.middleware';
 import { restrictTo } from '../middleware/role.middleware';
 import { Role } from '../types';
+import { uploadHotelImages, uploadRoomTypeImage, memoryUpload } from '../middleware/upload.middleware';
 
-import { getDashboard } from '../controllers/dashboard.controller';
-import { getHotelBookings, checkin, checkout, createBooking } from '../controllers/booking.controller';
-import { updateVisibility, updateFeatures, addImage, deleteImage } from '../controllers/hotel.controller';
-import { createRoomType, updateRoomType, deleteRoomType, addRoomTypeImage, deleteRoomTypeImage, getRoomTypes } from '../controllers/room-type.controller';
-import { updateInventory, getAvailability } from '../controllers/inventory.controller';
-import { upload } from '../middleware/upload.middleware';
+const router = Router({ mergeParams: true });
 
-const router = Router({ mergeParams: true }); // Merge params to access :hotelId
-
-// Apply middleware to all routes in this router
 router.use(protect);
-router.use(restrictToHotel);
+router.use(restrictTo(Role.HOTEL_OWNER, Role.STAFF, Role.ADMIN));
 
 // Dashboard
-router.get('/dashboard', getDashboard);
-
-// Bookings
-router.get('/bookings', getHotelBookings);
-router.post('/bookings/:id/checkin', restrictTo(Role.HOTEL_OWNER, Role.STAFF), checkin);
-router.post('/bookings/:id/checkout', restrictTo(Role.HOTEL_OWNER, Role.STAFF), checkout);
-// We might also want to scope booking creation if it's done by staff, but usually customers create bookings.
-// If it's a staff creating a booking, it goes here.
-
-// Room Types
-router.get('/room-types', getRoomTypes);
-router.post('/room-types', restrictTo(Role.HOTEL_OWNER), createRoomType);
-router.put('/room-types/:id', restrictTo(Role.HOTEL_OWNER), updateRoomType);
-router.delete('/room-types/:id', restrictTo(Role.HOTEL_OWNER), deleteRoomType);
-
-// Room Type Images
-// Note: These use the room-type id, not the hotel id in the path for the specific resource,
-// but they are scoped under /hotel/:hotelId/room-types/...
-router.post('/room-types/:id/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), upload.single('image'), addRoomTypeImage);
-router.delete('/room-types/images/:imageId', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), deleteRoomTypeImage);
+router.get('/dashboard', dashboardController.getDashboard);
 
 // Hotel Settings
-router.put('/visibility', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateVisibility);
-router.put('/features', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateFeatures);
-router.post('/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), upload.single('image'), addImage);
-// Note: Delete hotel image uses body for imageUrl
-router.delete('/images', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), deleteImage);
+router.get('/settings', hotelController.getHotelSettings);
+
+// Hotel Details & Completeness
+router.get('/profile-completion', hotelController.getProfileCompleteness);
+
+// Hotel Settings & Visibility
+router.put('/features', hotelController.updateFeatures);
+router.patch('/features', hotelController.updateFeatures);
+router.put('/visibility', hotelController.updateVisibility);
+router.patch('/visibility', hotelController.updateVisibility);
+
+// Hotel Images
+router.post('/images', uploadHotelImages.array('images', 5), hotelController.addHotelImage);
+router.delete('/images', hotelController.deleteHotelImage);
+
+// Bookings
+router.get('/bookings', bookingController.getHotelBookings);
+router.patch('/bookings/:id/notes', bookingController.updateBookingNotes);
+router.put('/bookings/:id/checkin', bookingController.checkin);
+router.put('/bookings/:id/checkout', bookingController.checkout);
+
+// Room Types
+router.post('/room-types', hotelController.addRoomType);
+router.get('/room-types', hotelController.getRoomTypes);
+router.put('/room-types/:id', hotelController.updateRoomType);
+router.delete('/room-types/:id', hotelController.deleteRoomType);
+
+// Room Type Images (Scoped)
+router.post('/room-types/:id/images', memoryUpload.single('image'), hotelController.addRoomTypeImage);
+router.delete('/room-types/images/:id', hotelController.deleteRoomTypeImage);
 
 // Inventory
-router.patch('/inventory', restrictTo(Role.HOTEL_OWNER, Role.ADMIN), updateInventory);
-router.get('/inventory', getAvailability);
+router.get('/inventory/calendar', inventoryController.getCalendar);
+router.patch('/inventory', inventoryController.updateInventory);
+router.post('/inventory/init', inventoryController.initInventory);
+
+// Analytics
+router.get('/analytics', analyticsController.getHotelAnalytics);
 
 export default router;
